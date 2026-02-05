@@ -41,6 +41,10 @@
     "README.md"
   ],
   "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
     "test": "echo \"Error: no test specified\" && exit 1",
     "prepare": "husky"
   },
@@ -56,5 +60,8 @@
   "dependencies": {
     "commander": "^14.0.3",
     "enquirer": "^2.4.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
