@@ -1,10 +1,10 @@
 {
-  "name": "genesis",
+  "name": "aureus",
   "version": "0.0.0",
-  "description": "A high performance CLI tool to automate the setup of Git, Github repositories, husky hooks and semantic release with built-in support for all major package managers and shells.",
+  "description": "",
   "keywords": [
     "cli",
-    "genesis",
+    "aureus",
     "boilerplate",
     "repo-init",
     "automation",
@@ -21,24 +21,25 @@
     "scaffold",
     "devops"
   ],
-  "homepage": "https://github.com/8366888C/genesis#readme",
+  "homepage": "https://github.com/8366888C/aureus#readme",
   "bugs": {
-    "url": "https://github.com/8366888C/genesis/issues"
+    "url": "https://github.com/8366888C/aureus/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/8366888C/genesis.git"
+    "url": "git+https://github.com/8366888C/aureus.git"
   },
   "license": "MIT",
   "author": "Rahul <deploy.rahul@gmail.com>",
   "type": "module",
   "main": "./dist/index.js",
   "bin": {
-    "genesis": "./dist/index.js"
+    "aureus": "dist/index.js"
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsup",

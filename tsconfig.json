@@ -2,21 +2,21 @@
   "compilerOptions": {
     "target": "ESNext",
     "lib": ["ESNext"],
-    "module": "NodeNext" /* Required for native ESM in Node.js */,
-    "moduleResolution": "NodeNext" /* Ensures imports work correctly with "type": "module" */,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
 
     /* Type Checking */
-    "strict": true /* This covers all the "strict..." flags you listed */,
-    "skipLibCheck": true /* Keeps build times fast */,
+    "strict": true,
+    "skipLibCheck": true,
 
     /* Emit - Handled largely by tsup, but good for IDE support */
     "outDir": "./dist",
-    "declaration": true /* Generates .d.ts files for your package users */,
+    "declaration": true,
 
     /* Interop Constraints */
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "isolatedModules": true /* Required for transpilers like esbuild/tsup */,
+    "isolatedModules": true /* required for transpilers like esbuild/tsup */,
     "resolveJsonModule": true
   },
   "include": ["src/**/*"],
