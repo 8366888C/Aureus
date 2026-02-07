@@ -1,5 +1,6 @@
 import { Command } from "commander";
-import { prompt } from "enquirer";
+import Enquirer from "enquirer";
+const { prompt } = Enquirer;
 import path from "node:path";
 import fs from "node:fs";
 
