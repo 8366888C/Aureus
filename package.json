@@ -1,7 +1,7 @@
 {
   "name": "aureus",
   "version": "1.0.1",
-  "description": "",
+  "description": "A high performance CLI tool to automate the setup of Git, Github repositories, husky hooks and semantic release with built-in support for all major package managers and shells.",
   "keywords": [
     "cli",
     "aureus",
