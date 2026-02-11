@@ -1,4 +1,4 @@
-import { GITIGNORE_TEMPLATES, LICENSE_DISPLAY_NAMES } from "./constants.js";
+import { GITIGNORE_TEMPLATES, LICENSE_TEMPLATES } from "./templates.js";
 
 /*
 result of the pre-flight environment check
@@ -30,8 +30,8 @@ export interface ProjectConfig {
   needNPM: boolean;
   templateStyle: TemplateStyle;
   includeCodeOfConduct: boolean;
-  license: LicenseType;
-  gitignore: GitignoreTemplate;
+  license: string;
+  gitignore: string;
   createGitHubRepo: boolean;
   repoVisibility: "public" | "private";
   repoDescription: string;
@@ -59,5 +59,5 @@ export interface WriteFileOptions {
   createDirs: boolean;
 }
 
-export type LicenseType = keyof typeof LICENSE_DISPLAY_NAMES;
-export type GitignoreTemplate = (typeof GITIGNORE_TEMPLATES)[number];
+export type GINames = (typeof GITIGNORE_TEMPLATES)[number]["name"];
+export type LNames = (typeof LICENSE_TEMPLATES)[number]["name"];
