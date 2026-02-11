@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/8366888C/aureus/compare/v1.0.1...v1.1.0) (2026-02-11)
+
+
+### Features
+
+* add 'view' and 'add' options for gitignore ([51da07c](https://github.com/8366888C/aureus/commit/51da07c1c11b8befcb95dc84b003a920493ec20b))
+
 ## [1.0.1](https://github.com/8366888C/aureus/compare/v1.0.0...v1.0.1) (2026-02-07)
 
 
