@@ -1,7 +1,7 @@
 import Enquirer from "enquirer";
 const { prompt } = Enquirer;
-import LICENSE_TEMPLATES from "./templates/license.json" with { type: "json" };
-import GITIGNORE_TEMPLATES from "./templates/gitignore.json" with { type: "json" };
+import LICENSE_TEMPLATES from "../src/templates/license.json" with { type: "json" };
+import GITIGNORE_TEMPLATES from "../src/templates/gitignore.json" with { type: "json" };
 import { currentYear, imprintLicense } from "./utils.js";
 import { CType, GIType, LType } from "./types.js";
 

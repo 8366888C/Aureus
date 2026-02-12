@@ -1,7 +1,4 @@
 import { Command } from "commander";
-import pc from "picocolors";
-import Enquirer from "enquirer";
-const { prompt } = Enquirer;
 import path from "node:path";
 import fs from "node:fs";
 import { ERROR, SUCCESS } from "./utils.js";
