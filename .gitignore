@@ -140,6 +140,6 @@ vite.config.ts.timestamp-*
 
 test
 .txt
-__pycache__/
+__pycache__
 .venv
 templates

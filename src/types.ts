@@ -1,5 +1,5 @@
-import GITIGNORE_TEMPLATES from "./templates/gitignore.json" with { type: "json" };
-import LICENSE_TEMPLATES from "./templates/license.json" with { type: "json" };
+import GITIGNORE_TEMPLATES from "../templates/gitignore.json" with { type: "json" };
+import LICENSE_TEMPLATES from "../templates/license.json" with { type: "json" };
 
 /*
 result of the pre-flight environment check

@@ -9,7 +9,7 @@ log = setup_logger(__name__, "gitignore.log")
 class GITIGNORE:
     def __init__(self):
         self.base_dir = Path(__file__).resolve().parents[1]
-        self.template_dir = self.base_dir / "src" / "templates"
+        self.template_dir = self.base_dir / "templates"
         self.file_name = "gitignore.json"
         self.template_names = []
         self.data = {}
@@ -45,6 +45,7 @@ class GITIGNORE:
 
     def write_data(self):
         try:
+            self.template_dir.mkdir(parents=True, exist_ok=True)
             with open(self.template_dir / self.file_name, "w", encoding="utf-8") as f:
                 json.dump(self.data, f, indent=2)
             log.info(f"File {self.file_name} has been created successfully")

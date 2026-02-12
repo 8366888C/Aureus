@@ -18,16 +18,26 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup Python
+        uses: actions/setup-python@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "lts/*"
           cache: "npm"
 
+      - name: Generate Templates
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        run: |
+          python scripts/license.py
+          python scripts/gitignore.py
+
       - name: Install Dependencies
         run: npm install # can use npm ci
 
-      - name: Run Build
+      - name: Build
         run: npm run build
 
       - name: Semantic Release
