@@ -4,7 +4,11 @@ import Enquirer from "enquirer";
 const { prompt } = Enquirer;
 import path from "node:path";
 import fs from "node:fs";
-import { getGitignoreTemplate, GIChoices } from "./commands/gitignore.js";
+import { ERROR, SUCCESS } from "./utils.js";
+import { getConfig, saveConfig } from "./utils.js";
+import { GITIGNORE, LICENSE } from "./prompts.js";
+
+const CONFIG = getConfig();
 
 const program = new Command();
 program
@@ -22,7 +26,7 @@ program
     ".",
   )
   .action(async (folder) => {
-    console.log(pc.green(`Initializing project in: ${folder}`));
+    console.log(`Initializing project in: ${folder}`);
   });
 
 // ! ADD subcommand group
@@ -33,29 +37,33 @@ const add = program
 add
   .command("license")
   .description("Add a LICENSE file")
-  .action(() => {});
+  .action(async () => {
+    const data = LICENSE(CONFIG);
+    saveConfig({ user: { name: (await data).input.name } });
+    try {
+      fs.writeFileSync(
+        path.join(process.cwd(), "LICENSE"),
+        (await data).template,
+      );
+      SUCCESS();
+    } catch (e) {
+      ERROR(e);
+    }
+  });
 
 add
   .command("gitignore")
   .description("Add a template .gitignore file")
   .action(async () => {
-    const response = await prompt<{
-      gitignore: string;
-    }>({
-      type: "autocomplete",
-      name: "gitignore",
-      message: "",
-      choices: GIChoices,
-    });
-
+    const data = GITIGNORE(CONFIG);
     try {
-      const text = getGitignoreTemplate(response.gitignore);
-      fs.writeFileSync(path.join(process.cwd(), ".txt"), text);
-      console.log(
-        `Successfully generated .gitignore for ${response.gitignore}`,
+      fs.writeFileSync(
+        path.join(process.cwd(), ".gitignore"),
+        (await data).template,
       );
+      SUCCESS();
     } catch (e) {
-      console.error(`Cannot create .gitignore : ${e}`);
+      ERROR(e);
     }
   });
 
@@ -71,21 +79,19 @@ const view = program.command("view").description("View specific templates");
 
 view
   .command("license")
-  .description("Add a LICENSE file")
-  .action(() => {});
+  .description("View a LICENSE file")
+  .action(async () => {
+    const data = LICENSE(CONFIG);
+    saveConfig({ user: { name: (await data).input.name } });
+    console.log((await data).template);
+  });
 
 view
   .command("gitignore")
-  .description("View a template .gitignore file")
+  .description("View a .gitignore file")
   .action(async () => {
-    const response = await prompt<{
-      gitignore: { name: string; value: string };
-    }>({
-      type: "autocomplete",
-      name: "gitignore",
-      message: "",
-      choices: GIChoices,
-    });
+    const data = GITIGNORE(CONFIG);
+    console.log((await data).template);
   });
 
 view

@@ -1,4 +1,5 @@
-import { GITIGNORE_TEMPLATES, LICENSE_TEMPLATES } from "./templates.js";
+import GITIGNORE_TEMPLATES from "./templates/gitignore.json" with { type: "json" };
+import LICENSE_TEMPLATES from "./templates/license.json" with { type: "json" };
 
 /*
 result of the pre-flight environment check
@@ -59,5 +60,17 @@ export interface WriteFileOptions {
   createDirs: boolean;
 }
 
-export type GINames = (typeof GITIGNORE_TEMPLATES)[number]["name"];
-export type LNames = (typeof LICENSE_TEMPLATES)[number]["name"];
+export type GIType = keyof typeof GITIGNORE_TEMPLATES;
+export type LType = keyof typeof LICENSE_TEMPLATES;
+
+export type CType = {
+  user: {
+    name: string;
+    email: string;
+    website: string;
+    github_username: string;
+  };
+  settings: {
+    git: boolean;
+  };
+};

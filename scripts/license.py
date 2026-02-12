@@ -3,7 +3,7 @@ from pathlib import Path
 import subprocess
 import json
 
-log = setup_logger(__name__, "license_templates.log")
+log = setup_logger(__name__, "license.log")
 
 
 class LICENSE:
