@@ -1,3 +1,18 @@
+# [1.2.0](https://github.com/8366888C/aureus/compare/v1.1.0...v1.2.0) (2026-02-12)
+
+
+### Bug Fixes
+
+* add cache, data and logs ([7dadbc6](https://github.com/8366888C/aureus/commit/7dadbc62de57c4f073f15297a39d9bcb026c52a1))
+* change imports from relative to absolute ([d1a94ca](https://github.com/8366888C/aureus/commit/d1a94ca8799551ebe8e941770b70f8e74a71194e))
+* change scripts to use json object for data ([2ae7445](https://github.com/8366888C/aureus/commit/2ae744525dbd2aded3f0b2fabed51b193eb9a963))
+* run python scripts in gh actions ([6c5ddb5](https://github.com/8366888C/aureus/commit/6c5ddb51d235b2a86a9ff51073d9b74646b3e772))
+
+
+### Features
+
+* add 'view' and 'add' options for licenses ([a6bb2ec](https://github.com/8366888C/aureus/commit/a6bb2ec0dbfcf304d9f85a62b8b056e24087d91c))
+
 # [1.1.0](https://github.com/8366888C/aureus/compare/v1.0.1...v1.1.0) (2026-02-11)
 
 
