@@ -1,0 +1,6 @@
+{
+  "bug-report": "bug_report",
+  "feature-request": "feature_request",
+  "feedback": "feedback",
+  "config": "blank_issues_enabled: [bool]\ncontact_links:\n  - name: [name]\n  - url: [url]\n  - about: [about]"
+}

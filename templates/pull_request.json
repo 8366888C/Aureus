@@ -1,0 +1,5 @@
+{
+  "short": "## Summary\n\n<!-- High level description of the change. -->\n\n### Changes\n\n<!-- Paste output of `git log --oneline main..dev` -->\n",
+  "long": "## Description\nPlease include a summary of the change and which issue is fixed.\n\n## Checklist:\n- [ ] My code follows the style guidelines of this project.\n- [ ] I have performed a self-review of my own code.\n- [ ] I have added tests that prove my fix is effective or that my feature works.\n",
+  "both": ""
+}

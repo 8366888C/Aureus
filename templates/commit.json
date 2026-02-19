@@ -1,0 +1,10 @@
+{
+  "feat": "a new feature",
+  "fix": "a bug fix",
+  "refactor": "code rewrites or restructure",
+  "build": "changes that affect build components like  build tool, ci pipeline, dependencies, project version",
+  "chore": "changes that dont modify main app like docs, dev env, gitignore",
+  "test": "add missing tests or correctinvg existing tests",
+  "ops": "commits that affect operational components like infrastructure, deployment, backup, recovery",
+  "revert": "reverts to a previous commit"
+}
