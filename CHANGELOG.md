@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/8366888C/aureus/compare/v1.2.0...v1.3.0) (2026-02-19)
+
+
+### Features
+
+* add template options for issues, pull-requests, code-of-conduct and commit tui ([ad75e1a](https://github.com/8366888C/aureus/commit/ad75e1a391eba2cc80512e0f18ea9fb1d38e33f3))
+
 # [1.2.0](https://github.com/8366888C/aureus/compare/v1.1.0...v1.2.0) (2026-02-12)
 
 
