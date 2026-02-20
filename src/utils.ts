@@ -1,9 +1,12 @@
 import pc from "picocolors";
 import Enquirer from "enquirer";
 const { prompt } = Enquirer;
+import { stdout } from "node:process";
 import { CInterface, ThemeContext } from "./types.js";
 
 // ! PROMPTS
+const dynamicLimit = Math.max(1, stdout.rows - 4);
+
 export async function input<TShape>({
   name,
   message,
@@ -38,6 +41,7 @@ export async function autocomplete<TShape>({
     message: message,
     hint: pc.cyan("[use arrows to move, type to filter]"),
     choices: choices,
+    limit: dynamicLimit,
     ...theme,
   } as any);
 }
@@ -73,6 +77,7 @@ export async function multiselect<TShape>({
     message: message,
     hint: pc.cyan("[use arrows to move, space to select"),
     choices: choices,
+    limit: dynamicLimit,
     ...theme,
   } as any);
 }
