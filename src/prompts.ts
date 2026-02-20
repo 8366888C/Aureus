@@ -81,12 +81,14 @@ export async function ISSUE(CONFIG: CInterface) {
     choices: Object.keys(ISSUE_TEMPLATES),
   });
 
-  let templates = options.options.map((option) => {
-    return {
-      option: option,
-      template: ISSUE_TEMPLATES[option],
-    };
-  });
+  let templates: { option: IType; template: string }[] = options.options
+    .filter((option) => option !== "config")
+    .map((option) => {
+      return {
+        option: option,
+        template: ISSUE_TEMPLATES[option],
+      };
+    });
 
   if (options.options.includes("config")) {
     const blank = await confirm<{ blank: boolean }>({
@@ -101,7 +103,7 @@ export async function ISSUE(CONFIG: CInterface) {
     const url = await input<{ url: string }>({
       name: "url",
       message: "Contact URL or email address",
-      initial: CONFIG.user.website ?? CONFIG.user.email,
+      initial: CONFIG.user.email ?? CONFIG.user.website,
     });
     const about = await input<{ about: string }>({
       name: "about",
