@@ -1,0 +1,10 @@
+{
+  "default": {
+    "header": "## [[version]] - [date]\n",
+    "sections": {
+      "features": "### Features\n",
+      "bug-fixes": "### Bug Fixes\n"
+    },
+    "item": "- [message] [[hash]]\n"
+  }
+}
