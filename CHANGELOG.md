@@ -1,3 +1,11 @@
+## [1.3.1](https://github.com/8366888C/aureus/compare/v1.3.0...v1.3.1) (2026-03-09)
+
+
+### Bug Fixes
+
+* add dynamic limit based on terminal size for displaying list items ([03bad58](https://github.com/8366888C/aureus/commit/03bad58e1473cead8374088bb01b58fd6b7b54e6))
+* handle config duplication during function return ([2cd6a33](https://github.com/8366888C/aureus/commit/2cd6a33a3a250afa63e449225367d886836e732f))
+
 # [1.3.0](https://github.com/8366888C/aureus/compare/v1.2.0...v1.3.0) (2026-02-19)
 
 
