@@ -2,10 +2,29 @@ import pc from "picocolors";
 import Enquirer from "enquirer";
 const { prompt } = Enquirer;
 import { stdout } from "node:process";
-import { CInterface, ThemeContext } from "./types.js";
+import child_process, { execSync, spawnSync } from "node:child_process";
+import fs, { existsSync } from "node:fs";
+import path from "node:path";
+import os, { release } from "node:os";
+import { CInterface, commit_types, IType, PMType, vType } from "./types.js";
+import {
+  CHANGELOG,
+  CODE_OF_CONDUCT,
+  COMMIT,
+  GITHUB_ACTIONS,
+  GITHUB_REMOTE_PROTOCOL,
+  GITHUB_REPO_VISIBILITY,
+  GITIGNORE,
+  INSTALL_GITHUB_CLI,
+  INSTALL_PM,
+  ISSUE,
+  LICENSE,
+  OVERWRITE,
+  PULL_REQUEST,
+} from "./prompts.js";
 
 // ! PROMPTS
-const dynamicLimit = Math.max(1, stdout.rows - 4);
+const dynamicLimit = Math.max(1, (stdout.rows || 8) - 4);
 
 export async function input<TShape>({
   name,
@@ -20,7 +39,6 @@ export async function input<TShape>({
     type: "input",
     name: name,
     message: message,
-    // hint: pc.cyan("[type to enter text]"),
     initial: initial,
     ...theme,
   } as any);
@@ -30,10 +48,15 @@ export async function autocomplete<TShape>({
   name,
   message,
   choices,
+  initial,
 }: {
   name: string;
   message: string;
-  choices: string[];
+  choices:
+    | string[]
+    | { name: string; message: string; hint: string }[]
+    | { name: string; message: string }[];
+  initial?: any;
 }) {
   return await prompt<TShape>({
     type: "autocomplete",
@@ -41,6 +64,7 @@ export async function autocomplete<TShape>({
     message: message,
     hint: pc.cyan("[use arrows to move, type to filter]"),
     choices: choices,
+    initial: initial,
     limit: dynamicLimit,
     ...theme,
   } as any);
@@ -49,15 +73,17 @@ export async function autocomplete<TShape>({
 export async function confirm<TShape>({
   name,
   message,
+  initial,
 }: {
   name: string;
   message: string;
+  initial?: any;
 }) {
   return await prompt<TShape>({
     type: "confirm",
     name: name,
     message: message,
-    hint: pc.cyan("[press y or n for true or false respectively]"),
+    initial: initial,
     ...theme,
   } as any);
 }
@@ -66,17 +92,23 @@ export async function multiselect<TShape>({
   name,
   message,
   choices,
+  initial,
 }: {
   name: string;
   message: string;
-  choices: string[];
+  choices:
+    | string[]
+    | { name: string; message: string; hint: string }[]
+    | { name: string; message: string }[];
+  initial?: any;
 }) {
   return await prompt<TShape>({
     type: "multiselect",
     name: name,
     message: message,
-    hint: pc.cyan("[use arrows to move, space to select"),
+    hint: pc.cyan("[use arrows to move, space to select]"),
     choices: choices,
+    initial: initial,
     limit: dynamicLimit,
     ...theme,
   } as any);
@@ -84,66 +116,361 @@ export async function multiselect<TShape>({
 
 // ! CUSTOM THEME
 export const theme = {
-  // prefix: (state: any) => (state.submitted ? pc.green("✓") : pc.magenta("?")),
+  prefix: (state: any) => (state.submitted ? pc.green("✓") : pc.cyan("?")),
   // styles: {
-  //   em: (str: string) => str,
+  //   em: (str: string) => pc.bold(str),
+  //   primary: pc.cyan,
   // },
-  // format(this: ThemeContext) {
+  // format(this: any) {
   //   if (this.state.submitted) {
   //     return pc.green(this.value);
   //   }
   //   return this.value;
   // },
-  // choiceMessage(this: ThemeContext, choice: any, index: number): string {
-  //   return this.index === index ? pc.cyan(choice.message) : choice.message;
-  // },
-  // pointer(this: ThemeContext, _choice: any, index: number): string {
+  // pointer(this: any, _choice: any, index: number): string {
   //   return this.index === index ? pc.magenta(">") : " ";
   // },
 };
 
-// ? constants
+// ! CONSTANTS
+const DEFAULT_CONFIG: CInterface = {
+  author_name: "",
+  init_options: [
+    "code-of-conduct",
+    "github-repo",
+    "gitignore",
+    "issue",
+    "license",
+    "pull-request",
+  ],
+  package_manager: "pnpm",
+  license: "mit",
+  gitignore: "",
+  contact: "",
+  commit_type: "feat",
+  commit_message: "",
+  is_breaking: false,
+  github_repo_visibility: "public",
+  github_remote_protocol: "ssh",
+  github_username: "",
+};
+const currentDate = new Date().toISOString().split("T")[0];
 export const currentYear = new Date().getFullYear().toString();
-export const isEmail = (text?: string) =>
-  /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(text ?? "");
-// export const isWebsite = (text: string) =>
-//   /^(https?:\/\/)?([\w\-]+\.)+[\w\-]+/.test(text);
-
+export const INFO = (m: string) => console.log(m);
 export const SUCCESS = (m?: string) =>
   m
     ? console.log(pc.bgGreen(pc.bold(" SUCCESS ")) + pc.green(` → ${m}`))
     : console.log(pc.bgGreen(pc.bold(" SUCCESS ")));
 export const ERROR = (e: unknown) => {
   e
-    ? console.log(pc.bgRed(pc.bold(" ERROR ")) + pc.red(` → ${e}`))
-    : console.log(pc.bgRed(pc.bold(" ERROR ")));
+    ? console.error(pc.bgRed(pc.bold(" ERROR ")) + pc.red(` → ${e}`))
+    : console.error(pc.bgRed(pc.bold(" ERROR ")));
 };
+export const WARN = (m: string) =>
+  console.warn(pc.bgYellow(pc.bold(pc.black(" WARN "))) + pc.yellow(` → ${m}`));
+
+// ! COMMIT
+export function getCommitHistory() {
+  try {
+    const lastTag = child_process
+      .execSync("git describe --tags --abbrev=0", {
+        stdio: "pipe",
+      })
+      .toString()
+      .trim();
+    const logs = child_process
+      .execSync(`git log ${lastTag}..HEAD --oneline`, {
+        stdio: "pipe",
+      })
+      .toString()
+      .trim();
+    return logs.split("\n").filter(Boolean);
+  } catch (e) {
+    try {
+      const logs = child_process
+        .execSync("git log --oneline", { stdio: "pipe" })
+        .toString()
+        .trim();
+      return logs.split("\n").filter(Boolean);
+    } catch (e) {
+      return [];
+    }
+  }
+}
+
+// ! CHANGELOG
+export function getBumpType(commits: string[]) {
+  let bump: vType = "none";
+  for (const commit of commits) {
+    const message = commit.split(" ").slice(1).join(" ");
+    if (
+      message.includes("!") ||
+      message.toLowerCase().includes("breaking change")
+    ) {
+      return "major";
+    }
+    if (message.toLowerCase().startsWith("feat")) {
+      bump = "minor";
+    } else if (message.toLowerCase().startsWith("fix") && bump != "minor") {
+      bump = "patch";
+    }
+  }
+  return bump;
+}
+
+export function bumpVersion(type: vType) {
+  if (type === "none") return null;
+  const pkgPath = path.join(process.cwd(), "package.json");
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+  const version = pkg.version.split(".").map(Number);
+
+  if (type === "major") {
+    version[0]++;
+    version[1] = 0;
+    version[2] = 0;
+  } else if (type === "minor") {
+    version[1]++;
+    version[2] = 0;
+  } else if (type === "patch") {
+    version[2]++;
+  }
+
+  const bumpVersion = version.join(".");
+  pkg.version = bumpVersion;
+  fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
+  return bumpVersion;
+}
+
+export function generateChangelog(
+  newVersion: string,
+  commits: string[],
+  template: any,
+) {
+  const changelogPath = path.join(process.cwd(), "CHANGELOG.md");
+
+  // process header
+  const header = template.header
+    .replace(/\[\[version\]\]/gi, newVersion)
+    .replace(/\[date\]/gi, currentDate);
+
+  // Initialize groups based on the template's defined sections
+  const groups: Record<string, string[]> = {};
+  Object.keys(template.sections).forEach((key) => {
+    groups[key] = [];
+  });
+
+  const other: string[] = [];
+
+  // parse commits
+  commits.forEach((commitLine) => {
+    const firstSpace = commitLine.indexOf(" ");
+    const hash = commitLine.substring(0, 7);
+    const fullMessage = commitLine.substring(firstSpace + 1);
+
+    const match = fullMessage.match(/^(\w+)(!)?(?:\(([^)]+)\))?:\s*(.*)$/);
+
+    if (match) {
+      const type = match[1].toLowerCase();
+      const isBreaking = match[2] === "!";
+      const message = match[4];
+
+      const item = template.item
+        .replace(
+          /\[message\]/g,
+          isBreaking ? `**BREAKING:** ${message}` : message,
+        )
+        .replace(/\[\[hash\]\]/g, hash);
+
+      if (type === "feat") groups["features"].push(item);
+      else if (type === "fix") groups["bug-fixes"].push(item);
+      else other.push(item);
+    } else {
+      const item = template.item
+        .replace(/\[message\]/g, fullMessage)
+        .replace(/\[\[hash\]\]/g, hash);
+      other.push(item);
+    }
+  });
+
+  let body = "";
+
+  // add features
+  if (groups.features.length) {
+    body += `${template.sections.features}${groups.features.join("")}`;
+  }
+
+  // add bug fixes
+  if (groups["bug-fixes"].length) {
+    body += `${template.sections["bug-fixes"]}${groups["bug-fixes"].join("")}`;
+  }
+
+  const releaseEntry = `${header}\n${body}\n`;
+
+  // update file
+  let existingContent = "";
+  if (fs.existsSync(changelogPath)) {
+    existingContent = fs.readFileSync(changelogPath, "utf-8");
+  }
+
+  const title = "# CHANGELOG\n\n";
+  const finalContent = existingContent.includes("# CHANGELOG")
+    ? existingContent.replace(title, `${title}${releaseEntry}`)
+    : `${title}${releaseEntry}${existingContent}`;
+
+  return finalContent;
+  // fs.writeFileSync(changelogPath, finalContent);
+}
+
+// ! HUSKY HOOKS
+export function isBranchClean() {
+  const commits = getCommitHistory();
+  return commits.length > 0;
+}
+
+export function setupHooks(targetDir: string, prePush: boolean = false) {
+  const huskyDir = path.join(targetDir, ".husky");
+  const signature = "# aureus-setup-anchor";
+
+  if (!fs.existsSync(huskyDir)) {
+    fs.mkdirSync(huskyDir, { recursive: true });
+  }
+
+  try {
+    const commitMsgPath = path.join(huskyDir, "commit-msg");
+    const commitMsgHook = `\n${signature}\nnpx aureus verify -- $1\n`;
+    let commitMsgContent = "";
+    if (fs.existsSync(commitMsgPath)) {
+      commitMsgContent = fs.readFileSync(commitMsgPath, "utf-8");
+    } else {
+      commitMsgContent = "#!/bin/sh\n";
+    }
+    if (!commitMsgContent.includes(signature)) {
+      fs.appendFileSync(commitMsgPath, commitMsgContent + commitMsgHook, {
+        mode: 0o755,
+      });
+    }
+    SUCCESS("Successfully setup commit-msg hook");
+
+    const prePushPath = path.join(huskyDir, "pre-push");
+    if (prePush) {
+      const prePushHook = `\n${signature}
+  if [ "$AUREUS_INTERNAL_PUSH" = "true" ]; then
+    exit 0
+  fi
+  npx aureus bump
+  exit 1\n`;
+      let prePushContent = "";
+      if (fs.existsSync(prePushPath)) {
+        prePushContent = fs.readFileSync(prePushPath, "utf-8");
+      } else {
+        prePushContent = "#!/bin/sh\n";
+      }
+      if (!prePushContent.includes(signature)) {
+        fs.appendFileSync(prePushPath, prePushContent + prePushHook, {
+          mode: 0o755,
+        });
+      }
+    }
+    SUCCESS("Successfully setup pre-push hook");
+  } catch (e) {
+    ERROR(`Failed to setup husky hooks: ${e}`);
+  }
+}
+
+// ! GITHUB
+// export function checkGithubStatus(): { loggedIn: boolean; user?: string } {
+//   try {
+//     const result = child_process.execSync("gh auth status --json account", {
+//       stdio: "pipe",
+//     });
+//     const data = JSON.parse(result.toString());
+//     return { loggedIn: true, user: data.account };
+//   } catch (e) {
+//     return { loggedIn: false };
+//   }
+// }
+
+export function checkGithubStatus(): { loggedIn: boolean; user?: string } {
+  try {
+    // Run the command and grab both output pipes (stdout and stderr)
+    const result = spawnSync("gh", ["auth", "status"], { encoding: "utf-8" });
+
+    // Combine everything into one giant string of text
+    const allOutput = (result.stdout || "") + (result.stderr || "");
+
+    // If 'github.com' and 'Logged in' appear anywhere in the mess, you're in.
+    if (allOutput.includes("Logged in to github.com")) {
+      // Ugly, brute-force regex to grab the word after 'as' or 'account'
+      const match = allOutput.match(/(?:as|account)\s+([^\s\n]+)/i);
+
+      return {
+        loggedIn: true,
+        user: match ? match[1].trim() : "user",
+      };
+    }
+
+    return { loggedIn: false };
+  } catch (e) {
+    // If the 'gh' command doesn't even exist on the machine
+    return { loggedIn: false };
+  }
+}
+
+export async function installGithubCLI(): Promise<boolean> {
+  const platform = os.platform();
+  const installCmd =
+    platform === "win32"
+      ? "winget install --id Github.cli"
+      : platform === "darwin"
+        ? "brew install gh"
+        : null;
+
+  if (!installCmd) {
+    WARN(
+      "Automatic installation of Github CLI (gh) is not supported on this platform currently. Please install it manually from https://cli.github.com/",
+    );
+    return false;
+  }
+
+  try {
+    child_process.execSync(installCmd, { stdio: "inherit" });
+    SUCCESS("Github CLI installed successfully");
+    return true;
+  } catch (e) {
+    ERROR(`Failed to install Github CLI: ${e}`);
+    return false;
+  }
+}
 
 // ! CONFIG
-import fs from "fs";
-import path from "path";
-import os from "os";
-
-const BASE_DIR = path.join(os.homedir(), ".aureus");
-const CONFIG_PATH = path.join(BASE_DIR, "config.json");
-
-function initCONFIG() {
-  if (!fs.existsSync(BASE_DIR)) {
-    fs.mkdirSync(BASE_DIR, { recursive: true });
-  }
-  if (!fs.existsSync(CONFIG_PATH)) {
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify({}, null, 2), "utf-8");
-  }
-}
+const DIR = path.join(os.homedir(), ".aureus");
+const CONFIG_PATH = path.join(DIR, "config.json");
 
 export function getConfig() {
-  initCONFIG();
-  return JSON.parse(fs.readFileSync(CONFIG_PATH, "utf-8"));
+  if (!fs.existsSync(DIR)) {
+    fs.mkdirSync(DIR, { recursive: true });
+  }
+  const default_config = DEFAULT_CONFIG;
+  if (!fs.existsSync(CONFIG_PATH)) {
+    fs.writeFileSync(
+      CONFIG_PATH,
+      JSON.stringify(default_config, null, 2),
+      "utf-8",
+    );
+  }
+  const config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf-8"));
+  return {
+    ...default_config,
+    ...config,
+  };
 }
 
-export function saveConfig(data: object) {
+export function saveConfig(data: Partial<CInterface>) {
   const current = getConfig();
-  const updated = { ...current, ...data };
+  const updated = {
+    ...current,
+    ...data,
+  };
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(updated, null, 2));
 }
 
@@ -159,64 +486,740 @@ export function imprintLicense(
     .replace(/\[fullname\]|<name of author>|\[name\]/gi, name);
 }
 
-// ! ISSUE
-export function imprintIssue(
-  CONFIG: CInterface,
-  templates: { option: string; template: string }[],
-  {
-    blank,
-    name,
-    url,
-    about,
-  }: {
-    blank: { blank: boolean };
-    name: { name: string };
-    url: { url: string };
-    about: { about: string };
-  } = {
-    blank: { blank: false },
-    name: { name: "" },
-    url: { url: "" },
-    about: { about: "" },
-  },
-) {
-  return templates.map((template) => ({
-    option: template.option,
-    template: template.template
-      .replace(/\[bool\]/gi, blank.blank ? "true" : "false")
-      .replace(/\[name\]/gi, name.name)
-      .replace(/\[url\]/gi, url.url)
-      .replace(/\[about\]/gi, about.about)
-      .replace(/\[assignee\]/gi, CONFIG.user.github_username ?? ""),
-  }));
+// ! CODE OF CONDUCT
+export function imprintCodeOfConduct(template: string, contact: string) {
+  return template.replace(/\[contact\]/gi, contact);
 }
 
-// ! CODE OF CONDUCT
-export function imprintCodeOfConduct(details: {
-  contributor_covenant?: { template: string; contact: string };
-  django?: {
-    template: string;
-    governor: string;
-    email: string;
-    faq: string;
-    name: string;
-    guidelines?: string;
-  };
-}) {
-  if (details.contributor_covenant) {
-    return details.contributor_covenant.template.replace(
-      /\[contact\]/gi,
-      details.contributor_covenant.contact,
-    );
-  } else if (details.django) {
-    return details.django.template
-      .replace(/\[name\]/gi, details.django.name)
-      .replace(/\[governor\]/gi, details.django.governor)
-      .replace(/\[email\]/gi, details.django.email)
-      .replace(/\[faq\]/gi, details.django.faq)
-      .replace(/\[guidelines\]/gi, details.django.guidelines ?? "below");
+// ! MISC
+export function finalize() {
+  try {
+    child_process.execSync(`git add .`, { stdio: "inherit" });
+    child_process.execSync(`git commit -m "chore: initial commit"`, {
+      stdio: "inherit",
+    });
+    const branch = child_process
+      .execSync("git rev-parse --abbrev-ref HEAD")
+      .toString()
+      .trim();
+    if (branch === "HEAD") {
+      throw new Error(
+        "You are in a detached HEAD state. Please checkout a branch before pushing.",
+      );
+    }
+    child_process.execSync(`git push origin ${branch}`, { stdio: "inherit" });
+  } catch (e) {
+    ERROR(e);
   }
 }
 
-// ! COMMIT
-import COMMIT_TEMPLATES from "../templates/commit.json" with { type: "json" };
+export function has_package(package_name: string) {
+  try {
+    child_process.execSync(`${package_name} --version`, { stdio: "pipe" });
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+export function detect_package(BASE_DIR: string) {
+  const lockfiles: Record<string, PMType> = {
+    "pnpm-lock.yaml": "pnpm",
+    "yarn.lock": "yarn",
+    "bun.lockb": "bun",
+    "bun.lock": "bun",
+    "package-lock.json": "npm",
+  };
+
+  for (const [file, pm] of Object.entries(lockfiles)) {
+    if (fs.existsSync(path.join(BASE_DIR, file))) {
+      return pm;
+    }
+  }
+
+  const pkgPath = path.join(BASE_DIR, "package.json");
+  if (fs.existsSync(pkgPath)) {
+    try {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+
+      if (pkg.packageManager) {
+        const [name] = pkg.packageManager.split("@");
+        if (["npm", "pnpm", "yarn", "bun"].includes(name))
+          return name as PMType;
+      }
+
+      if (pkg.engines) {
+        if (pkg.engines.pnpm) return "pnpm";
+        if (pkg.engines.yarn) return "yarn";
+      }
+    } catch (e) {}
+  }
+
+  let currentDir = BASE_DIR;
+  let root = path.parse(currentDir).root;
+
+  while (currentDir !== root) {
+    const parentDir = path.dirname(currentDir);
+
+    if (fs.existsSync(path.join(parentDir, "pnpm-workspace.yaml")))
+      return "pnpm";
+    const parentPkgPath = path.join(parentDir, "package.json");
+    if (fs.existsSync(parentPkgPath)) {
+      try {
+        const parentPkg = JSON.parse(fs.readFileSync(parentPkgPath, "utf-8"));
+        if (parentPkg.workspaces) {
+          return detect_package(parentDir);
+        }
+      } catch (e) {}
+    }
+    currentDir = parentDir;
+  }
+  return null;
+}
+
+export function detect_git(BASE_DIR: string) {
+  try {
+    const result = execSync("git rev-parse --is-inside-work-tree", {
+      cwd: BASE_DIR,
+      stdio: ["ignore", "pipe", "ignore"],
+    })
+      .toString()
+      .trim();
+    return result === "true";
+  } catch (e) {
+    return false;
+  }
+}
+
+export function detect_code_of_conduct(BASE_DIR: string) {
+  const code_of_conduct = "CODE_OF_CONDUCT.md";
+  const commonSubfolders = [".", ".github", "docs"];
+  let currentDir = BASE_DIR;
+  const root = path.parse(currentDir).root;
+
+  while (currentDir !== root) {
+    for (const folder of commonSubfolders) {
+      const fullPath = path.join(currentDir, folder, code_of_conduct);
+      if (fs.existsSync(fullPath)) {
+        return fullPath;
+      }
+    }
+    currentDir = path.dirname(currentDir);
+  }
+  return null;
+}
+
+// ! INIT
+export async function INIT_PACKAGE_MANAGER(
+  CONFIG: CInterface,
+  package_manager: PMType,
+  BASE_DIR: string,
+) {
+  if (!has_package(package_manager)) {
+    WARN(`${package_manager} is not installed on your system`);
+    const install_pm = await INSTALL_PM(CONFIG);
+    if (install_pm) {
+      try {
+        switch (package_manager) {
+          case "pnpm":
+            child_process.execSync("npm install -g pnpm", {
+              stdio: "inherit",
+            });
+            break;
+          case "yarn":
+            child_process.execSync("npm install -g yarn", {
+              stdio: "inherit",
+            });
+            break;
+          case "bun":
+            child_process.execSync("npm install -g bun", {
+              stdio: "inherit",
+            });
+            break;
+          default:
+            break;
+        }
+        SUCCESS(`${package_manager} installed successfully`);
+      } catch (e) {
+        ERROR(
+          `Failed to install ${package_manager}. Please install it manually: ${e}`,
+        );
+        return;
+      }
+    } else {
+      ERROR(`Cannot proceed without ${package_manager}`);
+      return;
+    }
+  }
+
+  const packageJsonPath = path.join(BASE_DIR, "package.json");
+  if (fs.existsSync(packageJsonPath)) {
+    SUCCESS(
+      `Existing package.json detected in ${path.basename(BASE_DIR)}. Skipping initialization`,
+    );
+  } else {
+    // initialize project using said package manager
+    try {
+      switch (package_manager) {
+        case "pnpm":
+          child_process.execSync("pnpm init", {
+            stdio: "inherit",
+            cwd: BASE_DIR,
+          });
+          break;
+        case "yarn":
+          child_process.execSync("yarn init -y", {
+            stdio: "inherit",
+            cwd: BASE_DIR,
+          });
+          break;
+        case "bun":
+          child_process.execSync("bun init -y", {
+            stdio: "inherit",
+            cwd: BASE_DIR,
+          });
+          break;
+        default:
+          child_process.execSync("npm init -y", {
+            stdio: "inherit",
+            cwd: BASE_DIR,
+          });
+          break;
+      }
+      SUCCESS(`Project initialized using ${package_manager}`);
+    } catch (e) {
+      ERROR(`Failed to initialize ${package_manager} project: ${e}`);
+    }
+  }
+}
+
+export function INIT_GIT(BASE_DIR: string) {
+  try {
+    if (!detect_git(BASE_DIR)) {
+      child_process.execSync("git init", { stdio: "inherit", cwd: BASE_DIR });
+      SUCCESS("Initialized git repository");
+    } else {
+      INFO("Git repository already detected");
+    }
+  } catch (e) {
+    ERROR(`Failed to initialize git repository: ${e}`);
+  }
+}
+
+export function INIT_HUSKY(package_manager: PMType, BASE_DIR: string) {
+  if (fs.existsSync(path.join(BASE_DIR, ".husky")))
+    INFO("Husky already installed");
+
+  try {
+    switch (package_manager) {
+      case "pnpm":
+        child_process.execSync("pnpm add -D husky", {
+          stdio: "inherit",
+          cwd: BASE_DIR,
+        });
+        break;
+      case "yarn":
+        child_process.execSync("yarn add -D husky", {
+          stdio: "inherit",
+          cwd: BASE_DIR,
+        });
+        break;
+      case "bun":
+        child_process.execSync("bun add -d husky", {
+          stdio: "inherit",
+          cwd: BASE_DIR,
+        });
+        break;
+      default:
+        child_process.execSync("npm install husky --save-dev", {
+          stdio: "inherit",
+          cwd: BASE_DIR,
+        });
+        break;
+    }
+    try {
+      child_process.execSync("npx husky init", {
+        stdio: "inherit",
+        cwd: BASE_DIR,
+      });
+    } catch (e) {
+      ERROR(`Failed to run npx husky init: ${e}`);
+    }
+  } catch (e) {
+    ERROR(`Failed to install husky: ${e}`);
+  }
+}
+
+export function INIT_GITIGNORE(BASE_DIR: string) {
+  const gitignorePath = path.join(BASE_DIR, ".gitignore");
+  const comment = "# aureus-setup-anchor";
+  const ignoredItems = ["node_modules/"];
+  const ignoredList = ignoredItems.join("\n");
+  const gitignore = `${comment}\n${ignoredList}`;
+
+  try {
+    if (!fs.existsSync(gitignorePath)) {
+      fs.writeFileSync(gitignorePath, gitignore);
+      SUCCESS("Generated aureus default gitignore");
+      return;
+    }
+
+    const content = fs.readFileSync(gitignorePath, "utf-8");
+    if (!content.includes(comment)) {
+      const separator = content.endsWith("\n\\n")
+        ? ""
+        : content.endsWith("\n")
+          ? "\n"
+          : "\n\n";
+      fs.appendFileSync(gitignorePath, `${separator}${gitignore}`);
+      SUCCESS("Appended aureus default gitignore");
+    }
+  } catch (e) {
+    ERROR(`Failed aureus gitignore: ${e}`);
+  }
+}
+
+export async function INIT_GITHUB_ACTIONS(workflows_DIR: string) {
+  const releasePath = path.join(workflows_DIR, "release.yml");
+  const github_actions = GITHUB_ACTIONS();
+  try {
+    if (!fs.existsSync(workflows_DIR))
+      fs.mkdirSync(workflows_DIR, { recursive: true });
+
+    if (fs.existsSync(releasePath)) {
+      WARN("release.yml already exists");
+      const overwrite = await OVERWRITE("release.yml");
+      if (!overwrite) return;
+    }
+
+    fs.writeFileSync(
+      path.join(workflows_DIR, "release.yml"),
+      github_actions.template,
+    );
+    SUCCESS(`Generated github actions workflow`);
+  } catch (e) {
+    ERROR(`Failed to create github actions workflow: ${e}`);
+  }
+}
+
+export async function INIT_CHANGELOG(BASE_DIR: string) {
+  const changelogPath = path.join(BASE_DIR, "CHANGELOG.md");
+  try {
+    if (fs.existsSync(changelogPath)) {
+      WARN("CHANGELOG.md already exists");
+      const overwrite = await OVERWRITE("CHANGELOG.md");
+      if (!overwrite) return;
+    }
+    fs.writeFileSync(changelogPath, "# CHANGELOG\n\n");
+    SUCCESS(`Generated CHANGELOG.md`);
+  } catch (e) {
+    ERROR(`Failed to generate CHANGELOG.md: ${e}`);
+  }
+}
+
+// ! SWITCH
+export async function SWITCH_CODE_OF_CONDUCT(
+  CONFIG: CInterface,
+  BASE_DIR: string,
+  GITHUB_DIR: string,
+) {
+  const code_of_conduct = CODE_OF_CONDUCT(CONFIG);
+  try {
+    const existingPath = detect_code_of_conduct(BASE_DIR);
+    if (existingPath) {
+      WARN(`Existing Code of Conduct found at: ${existingPath}`);
+      const overwrite = await OVERWRITE("CODE_OF_CONDUCT.md");
+      if (!overwrite) return;
+    }
+
+    if (!fs.existsSync(GITHUB_DIR))
+      fs.mkdirSync(GITHUB_DIR, { recursive: true });
+    fs.writeFileSync(
+      path.join(GITHUB_DIR, "CODE_OF_CONDUCT.md"),
+      (await code_of_conduct).template,
+    );
+    CONFIG.contact = (await code_of_conduct).res.contact;
+    saveConfig(CONFIG);
+    SUCCESS(`Generated contributor-covenant template`);
+  } catch (e) {
+    ERROR(`Failed to create CODE_OF_CONDUCT.md: ${e}`);
+  }
+}
+
+export async function SWITCH_GITHUB_REPO(
+  CONFIG: CInterface,
+  folder: string,
+  BASE_DIR: string,
+) {
+  try {
+    // check gh cli package
+    if (!has_package("gh")) {
+      WARN("Github CLI (gh) not found");
+      const install_github_cli = await INSTALL_GITHUB_CLI();
+      if (install_github_cli) {
+        const success = await installGithubCLI();
+        if (!success) return;
+      } else {
+        WARN(`Please install it manually from https://cli.github.com`);
+        return;
+      }
+    }
+    // check gh auth status
+    let status = checkGithubStatus();
+    if (!status.loggedIn) {
+      WARN("Not logged in to Github. Launching login ... ");
+      child_process.execSync("gh auth login", { stdio: "inherit" });
+      status = checkGithubStatus();
+    }
+    if (!status.loggedIn || !status.user) {
+      ERROR("Failed to authenticate with Github CLI");
+      return;
+    }
+    CONFIG.github_username = status.user;
+    saveConfig(CONFIG);
+
+    // create github repository
+    const repoName = folder;
+    const username = status.user;
+
+    let existingRemote = null;
+    try {
+      existingRemote = child_process
+        .execSync("git remote get-url origin", { cwd: BASE_DIR, stdio: "pipe" })
+        .toString()
+        .trim();
+      if (existingRemote) {
+        WARN(`Remote "origin" already exists: ${existingRemote}`);
+        return;
+      }
+    } catch (e) {
+      INFO("No origin remote exists");
+    }
+
+    try {
+      child_process.execSync(`gh repo view ${username}/${repoName}`, {
+        stdio: "ignore",
+        cwd: BASE_DIR,
+      });
+      SUCCESS(`Repository ${username}/${repoName} already exists on Github`);
+      // if it exists but isnt linked, we just link it later
+    } catch (e) {
+      try {
+        const github_repo_visibility = await GITHUB_REPO_VISIBILITY(CONFIG);
+        CONFIG.github_repo_visibility = github_repo_visibility;
+        saveConfig(CONFIG);
+
+        const repo_args = [
+          "repo",
+          "create",
+          `${username}/${repoName}`,
+          `--${github_repo_visibility}`,
+          "--source=.",
+        ];
+        child_process.spawnSync("gh", repo_args, {
+          stdio: ["ignore", "inherit", "inherit"],
+          cwd: BASE_DIR,
+          shell: true,
+        });
+        SUCCESS("Created github repository");
+      } catch (e) {
+        ERROR(`Failed to create github repository: ${e}`);
+      }
+
+      try {
+        const github_remote_protocol = await GITHUB_REMOTE_PROTOCOL(CONFIG);
+        CONFIG.github_remote_protocol = github_remote_protocol;
+        saveConfig(CONFIG);
+
+        const remoteUrl =
+          github_remote_protocol === "https"
+            ? `https://github.com/${username}/${repoName}.git`
+            : `git@github.com:${username}/${repoName}.git`;
+
+        child_process.execSync(`git remote add origin ${remoteUrl}`, {
+          cwd: BASE_DIR,
+        });
+        SUCCESS("Linked to github repository");
+        ERROR(e);
+      } catch (e) {
+        ERROR(`Failed to link to github repository: ${e}`);
+      }
+    }
+  } catch (e) {
+    ERROR(`Failed to initialize github repository: ${e}`);
+  }
+}
+
+export async function SWITCH_GITIGNORE(CONFIG: CInterface, BASE_DIR: string) {
+  INIT_GITIGNORE(BASE_DIR);
+
+  const gitignore = await GITIGNORE(CONFIG);
+  try {
+    fs.writeFileSync(
+      path.join(BASE_DIR, ".gitignore"),
+      "\n" + gitignore.template,
+    );
+    CONFIG.gitignore = gitignore.res.gitignore_type;
+    saveConfig(CONFIG);
+    SUCCESS(`Generated .gitignore for ${gitignore.res.gitignore_type}`);
+  } catch (e) {
+    ERROR(`Failed to add .gitignore for ${gitignore}: ${e}`);
+  }
+}
+
+export async function SWITCH_ISSUE(ISSUE_DIR: string) {
+  try {
+    const issue = ISSUE();
+    if (!fs.existsSync(ISSUE_DIR)) fs.mkdirSync(ISSUE_DIR, { recursive: true });
+
+    const templates: { name: string; content: string; key: IType }[] = [
+      {
+        name: "bug-report.yml",
+        content: issue.template.bug,
+        key: "bug-report",
+      },
+      {
+        name: "feature-request.yml",
+        content: issue.template.feature,
+        key: "feature-request",
+      },
+      { name: "config.yml", content: issue.template.config, key: "config" },
+    ];
+
+    for (const { name, content, key } of templates) {
+      const filePath = path.join(ISSUE_DIR, name);
+
+      if (fs.existsSync(filePath)) {
+        WARN(`${name} already exists as an issue template`);
+        const overwrite = await OVERWRITE(key);
+        if (!overwrite) return;
+      }
+
+      fs.writeFileSync(filePath, content);
+    }
+    SUCCESS(`Generated issue templates`);
+  } catch (e) {
+    ERROR(`Failed to create issue templates: ${e}`);
+  }
+}
+
+export async function SWITCH_LICENSE(CONFIG: CInterface, BASE_DIR: string) {
+  const licensePath = path.join(BASE_DIR, "LICENSE.md");
+  const license = await LICENSE(CONFIG);
+  try {
+    if (fs.existsSync(licensePath)) {
+      WARN("LICENSE.md already exists");
+      const overwrite = await OVERWRITE("LICENSE.md");
+      if (!overwrite) return;
+    }
+    fs.writeFileSync(licensePath, license.template);
+    CONFIG.license = license.res.license_type;
+    CONFIG.author_name = license.res.author_name;
+    saveConfig(CONFIG);
+    SUCCESS(`Generated ${license.res.license_type} LICENSE`);
+  } catch (e) {
+    ERROR(`Failed to create ${license.res.license_type} LICENSE: ${e}`);
+  }
+}
+
+export async function SWITCH_PULL_REQUEST(GITHUB_DIR: string) {
+  const pull_request = PULL_REQUEST();
+  const pullRequestPath = path.join(GITHUB_DIR, "PULL_REQUEST_TEMPLATE.md");
+  try {
+    if (fs.existsSync(pullRequestPath)) {
+      WARN("PULL_REQUEST_TEMPLATE.md already exists");
+      const overwrite = await OVERWRITE("PULL_REQUEST_TEMPLATE.md");
+      if (!overwrite) return;
+    }
+    fs.writeFileSync(
+      path.join(GITHUB_DIR, "PULL_REQUEST_TEMPLATE.md"),
+      pull_request.template,
+    );
+    SUCCESS(`Generated PULL_REQUEST_TEMPLATE.md`);
+  } catch (e) {
+    ERROR(`Failed to creaate PULL_REQUEST_TEMPLATE.md: ${e}`);
+  }
+}
+
+export async function SWITCH_COMMIT(CONFIG: CInterface) {
+  let commitArgs: string[] = [];
+  let commitMessage = "";
+  try {
+    const data = await COMMIT(CONFIG);
+    const type = data.res.commit_type;
+    const message = data.res.commit_message;
+    const breaking = data.res.is_breaking;
+    CONFIG.commit_type = type;
+    CONFIG.commit_message = message;
+    CONFIG.is_breaking = breaking;
+    saveConfig(CONFIG);
+
+    if (breaking) {
+      commitArgs = ["commit", "-m", `${type}!: ${message}`];
+      commitMessage = `git commit -m "${type}!: ${message}"`;
+    } else {
+      commitArgs = ["commit", "-m", `${type}: ${message}`];
+      commitMessage = `git commit -m "${type}: ${message}"`;
+    }
+
+    child_process.spawnSync("git", commitArgs, { stdio: "inherit" });
+    SUCCESS(commitMessage);
+  } catch (e) {
+    return ERROR(e);
+  }
+}
+
+// ! VIEW
+export async function VIEW_LICENSE(CONFIG: CInterface) {
+  const license = await LICENSE(CONFIG);
+  try {
+    console.log(license.template);
+    SUCCESS();
+  } catch (e) {
+    ERROR(e);
+  }
+}
+
+export async function VIEW_GITIGNORE(CONFIG: CInterface) {
+  const gitignore = await GITIGNORE(CONFIG);
+  try {
+    console.log(gitignore.template);
+    SUCCESS();
+  } catch (e) {
+    ERROR(e);
+  }
+}
+
+export async function VIEW_PULL_REQUEST() {
+  const pull_request = await PULL_REQUEST();
+  try {
+    console.log(pull_request.template);
+    SUCCESS();
+  } catch (e) {
+    ERROR(e);
+  }
+}
+
+export function VIEW_ISSUE() {
+  const issue = ISSUE();
+  try {
+    console.log(issue.template.feature);
+    console.log("");
+    console.log(issue.template.bug);
+    console.log("");
+    console.log(issue.template.config);
+    SUCCESS();
+  } catch (e) {
+    ERROR(e);
+  }
+}
+
+export async function VIEW_CODE_OF_CONDUCT(CONFIG: CInterface) {
+  const code_of_conduct = await CODE_OF_CONDUCT(CONFIG);
+  try {
+    console.log(code_of_conduct.template);
+    SUCCESS();
+  } catch (e) {
+    ERROR(e);
+  }
+}
+
+export async function VIEW_GITHUB_ACTIONS() {
+  const github_actions = GITHUB_ACTIONS();
+  try {
+    console.log(github_actions.template);
+    SUCCESS();
+  } catch (e) {
+    ERROR(e);
+  }
+}
+
+// ! VERIFY
+export function VERIFY(file: any) {
+  const commitMsgFile = file || process.argv[process.argv.length - 1];
+  if (!commitMsgFile || !fs.existsSync(commitMsgFile)) {
+    ERROR("Commit message file not found");
+    process.exit(1);
+  }
+
+  const msg = fs.readFileSync(commitMsgFile, "utf-8").trim();
+  const types = commit_types;
+  const regex = new RegExp(`^(${types.join("|")})(\\(.+\\))?!?: .+$`);
+
+  if (!regex.test(msg)) {
+    ERROR(`Invalid commit message format: "${msg}"`);
+    WARN(
+      `Format must follow Conventional Commits: one of [${types.join(", ")}]`,
+    );
+    process.exit(1);
+  }
+  SUCCESS("Commit message verified");
+}
+
+// ! BUMP
+export async function BUMP(options: any) {
+  if (process.env.AUREUS_INTERNAL_PUSH === "true") {
+    process.exit(0);
+  }
+
+  if (!isBranchClean()) {
+    WARN("No new commits since last tag. Bump aborted.");
+    process.exit(0);
+  }
+
+  const commits = getCommitHistory();
+  const bumpType = getBumpType(commits);
+
+  if (bumpType === "none") {
+    WARN("No feature or fix commits found. Skipping version bump.");
+  } else {
+    const newVersion = bumpVersion(bumpType);
+
+    const changelog = await CHANGELOG();
+    const changelogContent = generateChangelog(
+      newVersion!,
+      commits,
+      changelog.template,
+    );
+
+    if (options.dryRun) {
+      console.log(`Next version would be: ${bumpType}`);
+      console.log("");
+      console.log(changelogContent);
+      return;
+    }
+
+    const changelogPath = path.join(process.cwd(), "CHANGELOG.md");
+    fs.writeFileSync(changelogPath, changelogContent);
+
+    // git operations
+    child_process.execSync("git add package.json CHANGELOG.md", {
+      stdio: "inherit",
+    });
+    child_process.execSync(`git commit -m "chore(bump): ${newVersion}"`, {
+      stdio: "inherit",
+    });
+    child_process.execSync(
+      `git tag -a v${newVersion} -m "release ${newVersion}"`,
+      {
+        stdio: "inherit",
+      },
+    );
+    SUCCESS(`Successfully bumped to version ${newVersion}`);
+  }
+
+  // push changes and tasgs
+  const branch = child_process
+    .execSync("git rev-parse --abbrev-ref HEAD")
+    .toString()
+    .trim();
+  if (branch === "HEAD") {
+    throw new Error(
+      "You are in a detached HEAD state. Please checkout a branch before pushing.",
+    );
+  }
+  child_process.execSync(`git push origin ${branch} --tags`, {
+    stdio: "inherit",
+    env: { ...process.env, AUREUS_INTERNAL_PUSH: "true" },
+  });
+}
