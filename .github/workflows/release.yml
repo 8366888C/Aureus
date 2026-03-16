@@ -24,8 +24,11 @@ jobs:
           node-version: "lts/*"
           cache: "npm"
 
+      - name: Clear npm cache
+        run: npm cache clean --force
+
       - name: Install Dependencies
-        run: npm install # can use npm ci
+        run: npm ci
 
       - name: Build
         run: npm run build
