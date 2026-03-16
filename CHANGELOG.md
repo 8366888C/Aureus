@@ -1,3 +1,10 @@
+## [1.3.2](https://github.com/8366888C/aureus/compare/v1.3.1...v1.3.2) (2026-03-16)
+
+
+### Bug Fixes
+
+* clear cache in github actions ([f71b511](https://github.com/8366888C/aureus/commit/f71b511183fd36ac781ea67aad26fe4aaa988517))
+
 ## [1.3.1](https://github.com/8366888C/aureus/compare/v1.3.0...v1.3.1) (2026-03-09)
 
 
