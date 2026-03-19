@@ -328,13 +328,17 @@ export function isBranchClean() {
   return commits.length > 0;
 }
 
-export function setupHooks(package_manager: PMType, BASE_DIR: string) {
+export function setupHooks(BASE_DIR: string, package_manager?: PMType) {
   const huskyDir = path.join(BASE_DIR, ".husky");
   const signature = "# aureus-setup-anchor";
 
   if (!fs.existsSync(huskyDir)) {
-    WARN(".husky folder does not exist. Installing husky ...");
-    INIT_HUSKY(package_manager, BASE_DIR);
+    WARN(".husky folder does not exist");
+    if (package_manager) {
+      INIT_HUSKY(package_manager, BASE_DIR);
+    } else {
+      INFO("Install husky in this directory manually to setup hooks");
+    }
   }
 
   try {
@@ -798,7 +802,7 @@ export function INIT_HUSKY(package_manager: PMType, BASE_DIR: string) {
     ERROR(`Failed to install husky: ${e}`);
   }
 
-  setupHooks(package_manager, BASE_DIR);
+  setupHooks(BASE_DIR, package_manager);
 }
 
 export function INIT_GITIGNORE(BASE_DIR: string) {
@@ -1165,6 +1169,23 @@ export async function VIEW_GITHUB_ACTIONS() {
   const github_actions = GITHUB_ACTIONS();
   try {
     console.log(github_actions.template);
+    SUCCESS();
+  } catch (e) {
+    ERROR(e);
+  }
+}
+
+export async function VIEW_HUSKY_HOOKS() {
+  const signature = "# aureus-setup-anchor";
+  const commitMsgHook = `#!/bin/sh\n\n${signature}\nnpx aureus verify -- $1\n`;
+  const prePushHook = `#!/bin/sh\n\n${signature}\nif [ "$AUREUS_INTERNAL_PUSH" = "true" ]; then\n  exit 0\nfi\nnpx aureus bump\n`;
+
+  try {
+    console.log("commit-msg hook:");
+    console.log(commitMsgHook);
+    console.log("");
+    console.log("pre-push hook:");
+    console.log(prePushHook);
     SUCCESS();
   } catch (e) {
     ERROR(e);

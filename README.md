@@ -2,7 +2,22 @@
 
 CLI tool to bootstrap, standardize and automate repository workflows with built-in support for all major package managers.
 
-[NPM Package](https://www.npmjs.com/package/aureus) | [Issues](https://github.com/8366888C/aureus/issues)
+[![npm version](https://img.shields.io/npm/v/aureus)](https://www.npmjs.com/package/aureus)
+[![npm downloads](https://img.shields.io/npm/dw/aureus)](https://www.npmjs.com/package/aureus)
+[![license](https://img.shields.io/npm/l/aureus)](./LICENSE)
+
+[NPM Package](https://www.npmjs.com/package/aureus) | [Issues](https://github.com/8366888C/aureus/issues) | [Changelog](./CHANGELOG.md)
+
+<!-- DEMO GIF: A terminal recording of `aureus init my-project` running end-to-end, showing the interactive prompts and final success messages. Replace the src below with the actual gif path or URL. -->
+<!-- ![Aureus demo](./path/to/demo.gif) -->
+
+## Why Aureus?
+
+Every new project involves the same repetitive setup — picking a license, writing a `.gitignore`, configuring commit hooks, wiring up GitHub Actions, and creating a repo. Aureus collapses all of that into a single interactive CLI that also keeps enforcing standards after init:
+
+- **No config files to maintain** — preferences are saved globally and reused across projects
+- **Enforces conventional commits** automatically via a Husky hook, not a separate lint config
+- **Auto-bumps versions and generates changelogs** on every push, without CI tokens or extra tooling
 
 ## Key Features
 
@@ -15,7 +30,7 @@ CLI tool to bootstrap, standardize and automate repository workflows with built-
 - Husky hooks pre-configured out of the box
 - GitHub Actions workflow for automatic release on version tags
 - Issue and pull request templates
-- License and .gitignore templates (100+ options)
+- License and .gitignore templates (150+ options)
 - Multi-package manager support
 
 ## Supported Package Managers
@@ -27,7 +42,7 @@ CLI tool to bootstrap, standardize and automate repository workflows with built-
 
 ## Requirements
 
-- Node.js >= 18.0.0`
+- Node.js >= 18.0.0
 - Git
 
 ## Installation
@@ -42,6 +57,20 @@ yarn global add aureus
 bun add -g aureus
 ```
 
+## Quick Start
+
+```bash
+# Bootstrap a new project in one command
+aureus init my-project
+
+# Add components to an existing project
+aureus create license
+aureus create github-actions
+
+# Commit with guided prompts
+aureus commit
+```
+
 ## Commands
 
 ### `aureus init [folder]`
@@ -49,7 +78,6 @@ bun add -g aureus
 Initialize a new project with interactive prompts for package manager selection and customizable components.
 
 What it does in order:
-
 1. Prompts for components to include and package manager
 2. Runs `<pm> init` (or `<pm> install` if a lockfile is detected)
 3. Initializes a git repository (if not already one)
@@ -109,16 +137,16 @@ aureus commit
 
 Supported commit types:
 
-| Type       | Description                                                          |
-| ---------- | -------------------------------------------------------------------- |
-| `feat`     | A new feature                                                        |
-| `fix`      | A bug fix                                                            |
-| `refactor` | Code rewrites or restructure                                         |
-| `build`    | Changes to build components (build tool, CI pipeline, deps, version) |
-| `chore`    | Changes that don't modify the main app (docs, dev env, gitignore)    |
-| `test`     | Add missing tests or correct existing tests                          |
-| `ops`      | Commits affecting operational components (infra, deployment, backup) |
-| `revert`   | Reverts to a previous commit                                         |
+| Type       | Description                                                              |
+| ---------- | ------------------------------------------------------------------------ |
+| `feat`     | A new feature                                                            |
+| `fix`      | A bug fix                                                                |
+| `refactor` | Code rewrites or restructure                                             |
+| `build`    | Changes to build components (build tool, CI pipeline, deps, version)    |
+| `chore`    | Changes that don't modify the main app (docs, dev env, gitignore)       |
+| `test`     | Add missing tests or correct existing tests                              |
+| `ops`      | Commits affecting operational components (infra, deployment, backup)    |
+| `revert`   | Reverts to a previous commit                                             |
 
 Breaking changes append `!` to the type (e.g. `feat!: drop Node 16 support`).
 
@@ -163,20 +191,45 @@ aureus bump
 
 After bump creates a `v*` tag, the GitHub Actions workflow (installed by `aureus init` or `aureus create github-actions`) automatically creates a GitHub Release.
 
+## What Gets Created
+
+Running `aureus init my-project` with all components selected produces:
+
+```
+my-project/
+├── .github/
+│   ├── workflows/
+│   │   └── aureus-release.yml   # GitHub Release on v* tags
+│   ├── ISSUE_TEMPLATE/
+│   │   ├── bug-report.yml
+│   │   ├── feature-request.yml
+│   │   └── config.yml
+│   ├── CODE_OF_CONDUCT.md
+│   └── PULL_REQUEST_TEMPLATE.md
+├── .husky/
+│   ├── commit-msg               # runs: aureus verify
+│   └── pre-push                 # runs: aureus bump
+├── .gitignore
+├── CHANGELOG.md
+├── LICENSE.md
+└── package.json
+```
+
 ## Automated Workflow
 
 After `aureus init`, the following automation is in place on every project:
 
 ```
 git commit  →  commit-msg hook  →  aureus verify
-                                       ↓ (invalid: exit 1)
-                                       ↓ (valid: commit succeeds)
+                                       ↓ invalid → exit 1
+                                       ↓ valid   → commit succeeds
 
 git push    →  pre-push hook    →  aureus bump
-                                       ↓ (bumps version + CHANGELOG)
-                                       ↓ (creates vX.Y.Z tag)
-                                       ↓ (pushes tag → GitHub Actions)
-                                           → GitHub Release created
+                                       ↓ bumps package.json version
+                                       ↓ prepends CHANGELOG.md entry
+                                       ↓ commits + creates vX.Y.Z tag
+                                       ↓ tag push → GitHub Actions
+                                                  → GitHub Release
 ```
 
 > The `pre-push` hook sets `AUREUS_INTERNAL_PUSH=true` to prevent recursive triggering when it pushes the bump commit and tag.
@@ -242,6 +295,22 @@ Standard `PULL_REQUEST_TEMPLATE.md` placed in `.github/`.
 ### Code of Conduct
 
 Contributor Covenant template with configurable contact details, placed in `.github/CODE_OF_CONDUCT.md`.
+
+## Contributing
+
+```bash
+git clone https://github.com/8366888C/aureus.git
+cd aureus
+pnpm install
+pnpm dev       # build in watch mode
+pnpm start     # run the local build
+pnpm typecheck # type check without emitting
+```
+
+<!-- CONTRIBUTING SCREENSHOT: A terminal screenshot showing the dev workflow output (pnpm dev watch mode). Replace the src below with the actual image path or URL. -->
+<!-- ![Dev workflow](./path/to/dev-screenshot.png) -->
+
+Bug reports and pull requests are welcome on [GitHub](https://github.com/8366888C/aureus/issues).
 
 ## License
 

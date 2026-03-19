@@ -7,8 +7,6 @@ import {
   INIT_GITIGNORE,
   INIT_HUSKY,
   INIT_PACKAGE_MANAGER,
-  setupHooks,
-  SUCCESS,
   SWITCH_CODE_OF_CONDUCT,
   SWITCH_COMMIT,
   SWITCH_GITHUB_REPO,
@@ -26,11 +24,11 @@ import {
   finalize,
   INIT_CHANGELOG,
   INIT_GITHUB_ACTIONS,
-  detect_package,
+  setupHooks,
+  VIEW_HUSKY_HOOKS,
 } from "./utils.js";
 import { INIT, PACKAGE_MANAGER } from "./prompts.js";
 import { getConfig, saveConfig } from "./utils.js";
-import { PMType } from "./types.js";
 
 const CONFIG = getConfig();
 
@@ -135,7 +133,7 @@ create
 
 view
   .command("license")
-  .description("View a LICENSE file")
+  .description("view a LICENSE template")
   .action(async () => {
     await VIEW_LICENSE(CONFIG);
   });
@@ -143,14 +141,14 @@ view
 // ! gitignore
 create
   .command("gitignore")
-  .description("create a template .gitignore file")
+  .description("create a .gitignore file")
   .action(async () => {
     await SWITCH_GITIGNORE(CONFIG, process.cwd());
   });
 
 view
   .command("gitignore")
-  .description("View a .gitignore file")
+  .description("view a .gitignore template")
   .action(async () => {
     await VIEW_GITIGNORE(CONFIG);
   });
@@ -158,7 +156,7 @@ view
 // ! pull-request
 create
   .command("pull-request")
-  .description("create a pull_request template")
+  .description("create a pull request template")
   .action(() => {
     const GITHUB_DIR = path.join(process.cwd(), ".github");
     SWITCH_PULL_REQUEST(GITHUB_DIR);
@@ -166,7 +164,7 @@ create
 
 view
   .command("pull-request")
-  .description("View a pull_request template")
+  .description("view a pull request template")
   .action(() => {
     VIEW_PULL_REQUEST();
   });
@@ -174,7 +172,7 @@ view
 // ! issue
 create
   .command("issue")
-  .description("create an issue_template")
+  .description("create issue templates")
   .action(() => {
     const GITHUB_DIR = path.join(process.cwd(), ".github");
     const ISSUE_DIR = path.join(path.join(GITHUB_DIR), "ISSUE_TEMPLATE");
@@ -183,7 +181,7 @@ create
 
 view
   .command("issue")
-  .description("View an issue template")
+  .description("view issue templates")
   .action(() => {
     VIEW_ISSUE();
   });
@@ -191,7 +189,7 @@ view
 // ! CODE OF CONDUCT
 create
   .command("code-of-conduct")
-  .description("create code_of_conduct template")
+  .description("create a code of conduct file")
   .action(async () => {
     const BASE_DIR = process.cwd();
     const DOCS_DIR = path.join(process.cwd(), "docs");
@@ -200,15 +198,30 @@ create
 
 view
   .command("code-of-conduct")
-  .description("View code_of_conduct template")
+  .description("view a code of conduct template")
   .action(async () => {
     await VIEW_CODE_OF_CONDUCT(CONFIG);
+  });
+
+// ! HUSKY HOOKS
+create
+  .command("husky-hooks")
+  .description("create husky hooks for automatic version bump")
+  .action(() => {
+    setupHooks(process.cwd());
+  });
+
+view
+  .command("husky-hooks")
+  .description("view husky hooks")
+  .action(async () => {
+    VIEW_HUSKY_HOOKS();
   });
 
 // ! GITHUB ACTIONS
 create
   .command("github-actions")
-  .description("create github actions workflow")
+  .description("create a github actions workflow")
   .action(() => {
     const GITHUB_DIR = path.join(process.cwd(), ".github");
     const workflows_DIR = path.join(GITHUB_DIR, "workflows");
@@ -217,7 +230,7 @@ create
 
 view
   .command("github-actions")
-  .description("View github actions workflow")
+  .description("view a github actions workflow")
   .action(async () => {
     VIEW_GITHUB_ACTIONS();
   });
