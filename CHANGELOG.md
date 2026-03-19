@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/8366888C/aureus/compare/v1.4.0...v1.5.0) (2026-03-19)
+
+
+### Features
+
+* add create and view for husky hooks ([4d46c9b](https://github.com/8366888C/aureus/commit/4d46c9bdacc3b16c51fc4b702867792c07b901bf))
+
 # [1.4.0](https://github.com/8366888C/aureus/compare/v1.3.2...v1.4.0) (2026-03-19)
 
 
