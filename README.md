@@ -105,12 +105,14 @@ Add individual project components to an existing project:
 | `pull-request`    | Create a PR template           |
 | `issue`           | Create issue templates         |
 | `code-of-conduct` | Create code of conduct         |
+| `husky-hooks`     | Create Husky hooks             |
 | `github-actions`  | Create GitHub Actions workflow |
 | `github-repo`     | Create GitHub repository       |
 
 ```bash
 aureus create license
 aureus create gitignore
+aureus create husky-hooks
 aureus create github-repo
 ```
 
@@ -124,6 +126,7 @@ aureus view gitignore
 aureus view pull-request
 aureus view issue
 aureus view code-of-conduct
+aureus view husky-hooks
 aureus view github-actions
 ```
 
