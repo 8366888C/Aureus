@@ -189,7 +189,7 @@ export async function GITHUB_REMOTE_PROTOCOL(CONFIG: CInterface) {
 export async function OVERWRITE(name: string) {
   const { overwrite } = await confirm<{ overwrite: boolean }>({
     name: "overwrite",
-    message: `Do you want to overwrite existing ${name} template?`,
+    message: `Do you want to overwrite existing ${name}?`,
   });
   return overwrite;
 }

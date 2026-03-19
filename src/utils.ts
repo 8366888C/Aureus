@@ -145,7 +145,7 @@ const DEFAULT_CONFIG: CInterface = {
   ],
   package_manager: "pnpm",
   license: "mit",
-  gitignore: "",
+  gitignore: "Node",
   contact: "",
   commit_type: "feat",
   commit_message: "",
@@ -156,7 +156,6 @@ const DEFAULT_CONFIG: CInterface = {
 };
 const currentDate = new Date().toISOString().split("T")[0];
 export const currentYear = new Date().getFullYear().toString();
-export const INFO = (m: string) => console.log(m);
 export const SUCCESS = (m?: string) =>
   m
     ? console.log(pc.bgGreen(pc.bold(" SUCCESS ")) + pc.green(` → ${m}`))
@@ -166,7 +165,9 @@ export const ERROR = (e: unknown) => {
     ? console.error(pc.bgRed(pc.bold(" ERROR ")) + pc.red(` → ${e}`))
     : console.error(pc.bgRed(pc.bold(" ERROR ")));
 };
-export const WARN = (m: string) =>
+export const INFO = (m: string) =>
+  console.log(pc.bgWhite(pc.bold(pc.black(" INFO "))) + pc.white(` → ${m}`));
+export const WARN = (m: unknown) =>
   console.warn(pc.bgYellow(pc.bold(pc.black(" WARN "))) + pc.yellow(` → ${m}`));
 
 // ! COMMIT
@@ -327,12 +328,13 @@ export function isBranchClean() {
   return commits.length > 0;
 }
 
-export function setupHooks(targetDir: string, prePush: boolean = false) {
-  const huskyDir = path.join(targetDir, ".husky");
+export function setupHooks(package_manager: PMType, BASE_DIR: string) {
+  const huskyDir = path.join(BASE_DIR, ".husky");
   const signature = "# aureus-setup-anchor";
 
   if (!fs.existsSync(huskyDir)) {
-    fs.mkdirSync(huskyDir, { recursive: true });
+    WARN(".husky folder does not exist. Installing husky ...");
+    INIT_HUSKY(package_manager, BASE_DIR);
   }
 
   try {
@@ -349,33 +351,33 @@ export function setupHooks(targetDir: string, prePush: boolean = false) {
         mode: 0o755,
       });
     }
-    SUCCESS("Successfully setup commit-msg hook");
+    // SUCCESS("Successfully setup commit-msg hook");
 
     const prePushPath = path.join(huskyDir, "pre-push");
-    if (prePush) {
-      const prePushHook = `\n${signature}
-  if [ "$AUREUS_INTERNAL_PUSH" = "true" ]; then
-    exit 0
-  fi
-  npx aureus bump
-  exit 1\n`;
-      let prePushContent = "";
-      if (fs.existsSync(prePushPath)) {
-        prePushContent = fs.readFileSync(prePushPath, "utf-8");
-      } else {
-        prePushContent = "#!/bin/sh\n";
-      }
-      if (!prePushContent.includes(signature)) {
-        fs.appendFileSync(prePushPath, prePushContent + prePushHook, {
-          mode: 0o755,
-        });
-      }
+    const prePushHook = `\n${signature}\nif [ "$AUREUS_INTERNAL_PUSH" = "true" ]; then\n  exit 0\nfi\nnpx aureus bump\n`;
+    let prePushContent = "";
+    if (fs.existsSync(prePushPath)) {
+      prePushContent = fs.readFileSync(prePushPath, "utf-8");
+    } else {
+      prePushContent = "#!/bin/sh\n";
     }
-    SUCCESS("Successfully setup pre-push hook");
+    if (!prePushContent.includes(signature)) {
+      fs.appendFileSync(prePushPath, prePushContent + prePushHook, {
+        mode: 0o755,
+      });
+    }
+    // SUCCESS("Successfully setup pre-push hook");
+
+    const preCommitPath = path.join(huskyDir, "pre-commit");
+    const preCommitHook = "";
+    if (fs.existsSync(preCommitPath))
+      fs.writeFileSync(preCommitPath, preCommitHook);
+    SUCCESS("Generated default husky hooks");
   } catch (e) {
     ERROR(`Failed to setup husky hooks: ${e}`);
   }
 }
+0;
 
 // ! GITHUB
 // export function checkGithubStatus(): { loggedIn: boolean; user?: string } {
@@ -412,6 +414,7 @@ export function checkGithubStatus(): { loggedIn: boolean; user?: string } {
     return { loggedIn: false };
   } catch (e) {
     // If the 'gh' command doesn't even exist on the machine
+    ERROR(e);
     return { loggedIn: false };
   }
 }
@@ -492,25 +495,27 @@ export function imprintCodeOfConduct(template: string, contact: string) {
 }
 
 // ! MISC
-export function finalize() {
+export function finalize(BASE_DIR: string) {
   try {
-    child_process.execSync(`git add .`, { stdio: "inherit" });
-    child_process.execSync(`git commit -m "chore: initial commit"`, {
-      stdio: "inherit",
-    });
+    child_process.execSync(`git add .`, { stdio: "inherit", cwd: BASE_DIR });
+    child_process.execSync(
+      `git commit -m "chore: initial commit from aureus"`,
+      {
+        stdio: "inherit",
+        cwd: BASE_DIR,
+      },
+    );
     const branch = child_process
-      .execSync("git rev-parse --abbrev-ref HEAD")
+      .execSync("git rev-parse --abbrev-ref HEAD", { cwd: BASE_DIR })
       .toString()
       .trim();
-    if (branch === "HEAD") {
-      throw new Error(
-        "You are in a detached HEAD state. Please checkout a branch before pushing.",
-      );
-    }
-    child_process.execSync(`git push origin ${branch}`, { stdio: "inherit" });
-  } catch (e) {
-    ERROR(e);
-  }
+
+    child_process.execSync(`git push origin ${branch}`, {
+      stdio: "ignore",
+      cwd: BASE_DIR,
+    });
+    SUCCESS("Aureus initialization complete");
+  } catch (e) {}
 }
 
 export function has_package(package_name: string) {
@@ -612,9 +617,23 @@ export function detect_code_of_conduct(BASE_DIR: string) {
 // ! INIT
 export async function INIT_PACKAGE_MANAGER(
   CONFIG: CInterface,
-  package_manager: PMType,
+  selected_package_manager: PMType,
   BASE_DIR: string,
 ) {
+  let package_manager = selected_package_manager;
+  let skipInit = false;
+  const detected_package_manager = detect_package(BASE_DIR);
+  if (
+    detected_package_manager &&
+    detected_package_manager !== selected_package_manager
+  ) {
+    skipInit = true;
+    WARN(
+      `${detected_package_manager} found in the project root but selected package manager is ${package_manager}`,
+    );
+    INFO(`Using ${detected_package_manager} for installation`);
+    package_manager = detected_package_manager;
+  }
   if (!has_package(package_manager)) {
     WARN(`${package_manager} is not installed on your system`);
     const install_pm = await INSTALL_PM(CONFIG);
@@ -652,14 +671,9 @@ export async function INIT_PACKAGE_MANAGER(
     }
   }
 
-  const packageJsonPath = path.join(BASE_DIR, "package.json");
-  if (fs.existsSync(packageJsonPath)) {
-    SUCCESS(
-      `Existing package.json detected in ${path.basename(BASE_DIR)}. Skipping initialization`,
-    );
-  } else {
-    // initialize project using said package manager
-    try {
+  // initialize project using said package manager
+  try {
+    if (!skipInit) {
       switch (package_manager) {
         case "pnpm":
           child_process.execSync("pnpm init", {
@@ -686,11 +700,40 @@ export async function INIT_PACKAGE_MANAGER(
           });
           break;
       }
-      SUCCESS(`Project initialized using ${package_manager}`);
-    } catch (e) {
-      ERROR(`Failed to initialize ${package_manager} project: ${e}`);
+    } else {
+      switch (package_manager) {
+        case "pnpm":
+          child_process.execSync("pnpm install", {
+            stdio: "inherit",
+            cwd: BASE_DIR,
+          });
+          break;
+        case "yarn":
+          child_process.execSync("yarn install", {
+            stdio: "inherit",
+            cwd: BASE_DIR,
+          });
+          break;
+        case "bun":
+          child_process.execSync("bun install", {
+            stdio: "inherit",
+            cwd: BASE_DIR,
+          });
+          break;
+        default:
+          child_process.execSync("npm install", {
+            stdio: "inherit",
+            cwd: BASE_DIR,
+          });
+          break;
+      }
     }
+    SUCCESS(`Project initialized using ${package_manager}`);
+  } catch (e) {
+    ERROR(`Failed to initialize ${package_manager} project: ${e}`);
   }
+
+  return package_manager;
 }
 
 export function INIT_GIT(BASE_DIR: string) {
@@ -701,14 +744,20 @@ export function INIT_GIT(BASE_DIR: string) {
     } else {
       INFO("Git repository already detected");
     }
+    child_process.execSync("git config --local push.followTags true", {
+      stdio: "ignore",
+      cwd: BASE_DIR,
+    });
   } catch (e) {
     ERROR(`Failed to initialize git repository: ${e}`);
   }
 }
 
 export function INIT_HUSKY(package_manager: PMType, BASE_DIR: string) {
-  if (fs.existsSync(path.join(BASE_DIR, ".husky")))
+  if (fs.existsSync(path.join(BASE_DIR, ".husky"))) {
     INFO("Husky already installed");
+    return;
+  }
 
   try {
     switch (package_manager) {
@@ -748,6 +797,8 @@ export function INIT_HUSKY(package_manager: PMType, BASE_DIR: string) {
   } catch (e) {
     ERROR(`Failed to install husky: ${e}`);
   }
+
+  setupHooks(package_manager, BASE_DIR);
 }
 
 export function INIT_GITIGNORE(BASE_DIR: string) {
@@ -759,8 +810,8 @@ export function INIT_GITIGNORE(BASE_DIR: string) {
 
   try {
     if (!fs.existsSync(gitignorePath)) {
-      fs.writeFileSync(gitignorePath, gitignore);
-      SUCCESS("Generated aureus default gitignore");
+      fs.writeFileSync(gitignorePath, gitignore, "utf-8");
+      // SUCCESS("Generated aureus default gitignore");
       return;
     }
 
@@ -771,8 +822,12 @@ export function INIT_GITIGNORE(BASE_DIR: string) {
         : content.endsWith("\n")
           ? "\n"
           : "\n\n";
-      fs.appendFileSync(gitignorePath, `${separator}${gitignore}`);
-      SUCCESS("Appended aureus default gitignore");
+      fs.appendFileSync(
+        gitignorePath,
+        `${separator}${gitignore}` + "\n",
+        "utf-8",
+      );
+      // SUCCESS("Appended aureus default gitignore");
     }
   } catch (e) {
     ERROR(`Failed aureus gitignore: ${e}`);
@@ -780,22 +835,13 @@ export function INIT_GITIGNORE(BASE_DIR: string) {
 }
 
 export async function INIT_GITHUB_ACTIONS(workflows_DIR: string) {
-  const releasePath = path.join(workflows_DIR, "release.yml");
+  const releasePath = path.join(workflows_DIR, "aureus-release.yml");
   const github_actions = GITHUB_ACTIONS();
   try {
     if (!fs.existsSync(workflows_DIR))
       fs.mkdirSync(workflows_DIR, { recursive: true });
 
-    if (fs.existsSync(releasePath)) {
-      WARN("release.yml already exists");
-      const overwrite = await OVERWRITE("release.yml");
-      if (!overwrite) return;
-    }
-
-    fs.writeFileSync(
-      path.join(workflows_DIR, "release.yml"),
-      github_actions.template,
-    );
+    fs.writeFileSync(releasePath, github_actions.template);
     SUCCESS(`Generated github actions workflow`);
   } catch (e) {
     ERROR(`Failed to create github actions workflow: ${e}`);
@@ -805,15 +851,10 @@ export async function INIT_GITHUB_ACTIONS(workflows_DIR: string) {
 export async function INIT_CHANGELOG(BASE_DIR: string) {
   const changelogPath = path.join(BASE_DIR, "CHANGELOG.md");
   try {
-    if (fs.existsSync(changelogPath)) {
-      WARN("CHANGELOG.md already exists");
-      const overwrite = await OVERWRITE("CHANGELOG.md");
-      if (!overwrite) return;
-    }
+    if (fs.existsSync(changelogPath)) return;
     fs.writeFileSync(changelogPath, "# CHANGELOG\n\n");
-    SUCCESS(`Generated CHANGELOG.md`);
   } catch (e) {
-    ERROR(`Failed to generate CHANGELOG.md: ${e}`);
+    ERROR(e);
   }
 }
 
@@ -823,14 +864,14 @@ export async function SWITCH_CODE_OF_CONDUCT(
   BASE_DIR: string,
   GITHUB_DIR: string,
 ) {
-  const code_of_conduct = CODE_OF_CONDUCT(CONFIG);
   try {
     const existingPath = detect_code_of_conduct(BASE_DIR);
     if (existingPath) {
-      WARN(`Existing Code of Conduct found at: ${existingPath}`);
+      WARN(`CODE_OF_CONDUCT already exists`);
       const overwrite = await OVERWRITE("CODE_OF_CONDUCT.md");
       if (!overwrite) return;
     }
+    const code_of_conduct = CODE_OF_CONDUCT(CONFIG);
 
     if (!fs.existsSync(GITHUB_DIR))
       fs.mkdirSync(GITHUB_DIR, { recursive: true });
@@ -851,119 +892,115 @@ export async function SWITCH_GITHUB_REPO(
   folder: string,
   BASE_DIR: string,
 ) {
-  try {
-    // check gh cli package
-    if (!has_package("gh")) {
-      WARN("Github CLI (gh) not found");
-      const install_github_cli = await INSTALL_GITHUB_CLI();
-      if (install_github_cli) {
-        const success = await installGithubCLI();
-        if (!success) return;
-      } else {
-        WARN(`Please install it manually from https://cli.github.com`);
-        return;
-      }
-    }
-    // check gh auth status
-    let status = checkGithubStatus();
-    if (!status.loggedIn) {
-      WARN("Not logged in to Github. Launching login ... ");
-      child_process.execSync("gh auth login", { stdio: "inherit" });
-      status = checkGithubStatus();
-    }
-    if (!status.loggedIn || !status.user) {
-      ERROR("Failed to authenticate with Github CLI");
+  let status = checkGithubStatus();
+
+  // check gh cli package
+  if (!has_package("gh")) {
+    WARN("Github CLI (gh) not found");
+    const install_github_cli = await INSTALL_GITHUB_CLI();
+    if (install_github_cli) {
+      const success = await installGithubCLI();
+      if (!success) return;
+    } else {
+      WARN(`Please install it manually from https://cli.github.com`);
       return;
     }
-    CONFIG.github_username = status.user;
+  }
+  // check gh auth status
+  if (!status.loggedIn) {
+    WARN("Not logged in to Github. Launching login ... ");
+    child_process.execSync("gh auth login", { stdio: "inherit" });
+  }
+
+  status = checkGithubStatus();
+  if (!status.user) {
+    ERROR("Github username not found");
+    return;
+  }
+  CONFIG.github_username = status.user;
+  saveConfig(CONFIG);
+
+  // create github repository
+  const repoName = folder;
+  const username = status.user;
+
+  try {
+    child_process.execSync(`gh repo view ${username}/${repoName}`, {
+      stdio: "ignore",
+      cwd: BASE_DIR,
+    });
+    INFO(`Repository ${username}/${repoName} already exists on Github`);
+    // if it exists but isnt linked, we just link it later
+  } catch (e) {
+    try {
+      const github_repo_visibility = await GITHUB_REPO_VISIBILITY(CONFIG);
+      CONFIG.github_repo_visibility = github_repo_visibility;
+      saveConfig(CONFIG);
+
+      const repo_args = [
+        "repo",
+        "create",
+        `${username}/${repoName}`,
+        `--${github_repo_visibility}`,
+      ];
+      child_process.spawnSync("gh", repo_args, {
+        stdio: ["ignore", "inherit", "inherit"],
+        cwd: BASE_DIR,
+        shell: true,
+      });
+      SUCCESS("Created github repository");
+    } catch (e) {
+      ERROR(`Failed to create github repository: ${e}`);
+    }
+  }
+
+  try {
+    const github_remote_protocol = await GITHUB_REMOTE_PROTOCOL(CONFIG);
+    CONFIG.github_remote_protocol = github_remote_protocol;
     saveConfig(CONFIG);
 
-    // create github repository
-    const repoName = folder;
-    const username = status.user;
+    const remoteUrl =
+      github_remote_protocol === "https"
+        ? `https://github.com/${username}/${repoName}.git`
+        : `git@github.com:${username}/${repoName}.git`;
 
-    let existingRemote = null;
     try {
-      existingRemote = child_process
-        .execSync("git remote get-url origin", { cwd: BASE_DIR, stdio: "pipe" })
+      const existingRemote = child_process
+        .execSync("git remote get-url origin", {
+          cwd: BASE_DIR,
+          stdio: "pipe",
+        })
         .toString()
         .trim();
-      if (existingRemote) {
-        WARN(`Remote "origin" already exists: ${existingRemote}`);
-        return;
-      }
-    } catch (e) {
-      INFO("No origin remote exists");
-    }
-
-    try {
-      child_process.execSync(`gh repo view ${username}/${repoName}`, {
-        stdio: "ignore",
+      WARN(`Remote "origin" already exists: ${existingRemote}`);
+      const overwrite = await OVERWRITE(existingRemote);
+      if (!overwrite) return;
+      child_process.execSync(`git remote set-url origin ${remoteUrl}`, {
         cwd: BASE_DIR,
+        stdio: "inherit",
       });
-      SUCCESS(`Repository ${username}/${repoName} already exists on Github`);
-      // if it exists but isnt linked, we just link it later
     } catch (e) {
-      try {
-        const github_repo_visibility = await GITHUB_REPO_VISIBILITY(CONFIG);
-        CONFIG.github_repo_visibility = github_repo_visibility;
-        saveConfig(CONFIG);
-
-        const repo_args = [
-          "repo",
-          "create",
-          `${username}/${repoName}`,
-          `--${github_repo_visibility}`,
-          "--source=.",
-        ];
-        child_process.spawnSync("gh", repo_args, {
-          stdio: ["ignore", "inherit", "inherit"],
-          cwd: BASE_DIR,
-          shell: true,
-        });
-        SUCCESS("Created github repository");
-      } catch (e) {
-        ERROR(`Failed to create github repository: ${e}`);
-      }
-
-      try {
-        const github_remote_protocol = await GITHUB_REMOTE_PROTOCOL(CONFIG);
-        CONFIG.github_remote_protocol = github_remote_protocol;
-        saveConfig(CONFIG);
-
-        const remoteUrl =
-          github_remote_protocol === "https"
-            ? `https://github.com/${username}/${repoName}.git`
-            : `git@github.com:${username}/${repoName}.git`;
-
-        child_process.execSync(`git remote add origin ${remoteUrl}`, {
-          cwd: BASE_DIR,
-        });
-        SUCCESS("Linked to github repository");
-        ERROR(e);
-      } catch (e) {
-        ERROR(`Failed to link to github repository: ${e}`);
-      }
+      child_process.execSync(`git remote add origin ${remoteUrl}`, {
+        cwd: BASE_DIR,
+        stdio: "inherit",
+      });
     }
+    SUCCESS("Linked to github repository");
   } catch (e) {
-    ERROR(`Failed to initialize github repository: ${e}`);
+    ERROR(`Failed to link to github repository: ${e}`);
   }
 }
 
 export async function SWITCH_GITIGNORE(CONFIG: CInterface, BASE_DIR: string) {
-  INIT_GITIGNORE(BASE_DIR);
-
   const gitignore = await GITIGNORE(CONFIG);
+  const gitignorePath = path.join(BASE_DIR, ".gitignore");
   try {
-    fs.writeFileSync(
-      path.join(BASE_DIR, ".gitignore"),
-      "\n" + gitignore.template,
-    );
+    fs.appendFileSync(gitignorePath, "\n" + gitignore.template);
     CONFIG.gitignore = gitignore.res.gitignore_type;
     saveConfig(CONFIG);
-    SUCCESS(`Generated .gitignore for ${gitignore.res.gitignore_type}`);
+    SUCCESS(`Generated gitignore`);
   } catch (e) {
-    ERROR(`Failed to add .gitignore for ${gitignore}: ${e}`);
+    ERROR(`Failed to add gitignore: ${e}`);
   }
 }
 
@@ -990,9 +1027,9 @@ export async function SWITCH_ISSUE(ISSUE_DIR: string) {
       const filePath = path.join(ISSUE_DIR, name);
 
       if (fs.existsSync(filePath)) {
-        WARN(`${name} already exists as an issue template`);
-        const overwrite = await OVERWRITE(key);
-        if (!overwrite) return;
+        WARN(`${key} already exists as an issue template`);
+        const overwrite = await OVERWRITE(name);
+        if (!overwrite) continue;
       }
 
       fs.writeFileSync(filePath, content);
@@ -1005,20 +1042,20 @@ export async function SWITCH_ISSUE(ISSUE_DIR: string) {
 
 export async function SWITCH_LICENSE(CONFIG: CInterface, BASE_DIR: string) {
   const licensePath = path.join(BASE_DIR, "LICENSE.md");
-  const license = await LICENSE(CONFIG);
   try {
     if (fs.existsSync(licensePath)) {
-      WARN("LICENSE.md already exists");
-      const overwrite = await OVERWRITE("LICENSE.md");
+      WARN("LICENSE already exists");
+      const overwrite = await OVERWRITE("LICENSE");
       if (!overwrite) return;
     }
+    const license = await LICENSE(CONFIG);
     fs.writeFileSync(licensePath, license.template);
     CONFIG.license = license.res.license_type;
     CONFIG.author_name = license.res.author_name;
     saveConfig(CONFIG);
-    SUCCESS(`Generated ${license.res.license_type} LICENSE`);
+    SUCCESS(`Generated LICENSE`);
   } catch (e) {
-    ERROR(`Failed to create ${license.res.license_type} LICENSE: ${e}`);
+    ERROR(`Failed to create LICENSE: ${e}`);
   }
 }
 
@@ -1027,17 +1064,17 @@ export async function SWITCH_PULL_REQUEST(GITHUB_DIR: string) {
   const pullRequestPath = path.join(GITHUB_DIR, "PULL_REQUEST_TEMPLATE.md");
   try {
     if (fs.existsSync(pullRequestPath)) {
-      WARN("PULL_REQUEST_TEMPLATE.md already exists");
-      const overwrite = await OVERWRITE("PULL_REQUEST_TEMPLATE.md");
+      WARN("PULL_REQUEST_TEMPLATE already exists");
+      const overwrite = await OVERWRITE("PULL_REQUEST_TEMPLATE");
       if (!overwrite) return;
     }
     fs.writeFileSync(
       path.join(GITHUB_DIR, "PULL_REQUEST_TEMPLATE.md"),
       pull_request.template,
     );
-    SUCCESS(`Generated PULL_REQUEST_TEMPLATE.md`);
+    SUCCESS(`Generated pull request template`);
   } catch (e) {
-    ERROR(`Failed to creaate PULL_REQUEST_TEMPLATE.md: ${e}`);
+    ERROR(`Failed to creaate pull request template: ${e}`);
   }
 }
 
@@ -1171,7 +1208,7 @@ export async function BUMP(options: any) {
   const bumpType = getBumpType(commits);
 
   if (bumpType === "none") {
-    WARN("No feature or fix commits found. Skipping version bump.");
+    WARN("No feature or fix commits found. Skipping version bump");
   } else {
     const newVersion = bumpVersion(bumpType);
 
@@ -1207,19 +1244,4 @@ export async function BUMP(options: any) {
     );
     SUCCESS(`Successfully bumped to version ${newVersion}`);
   }
-
-  // push changes and tasgs
-  const branch = child_process
-    .execSync("git rev-parse --abbrev-ref HEAD")
-    .toString()
-    .trim();
-  if (branch === "HEAD") {
-    throw new Error(
-      "You are in a detached HEAD state. Please checkout a branch before pushing.",
-    );
-  }
-  child_process.execSync(`git push origin ${branch} --tags`, {
-    stdio: "inherit",
-    env: { ...process.env, AUREUS_INTERNAL_PUSH: "true" },
-  });
 }

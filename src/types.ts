@@ -15,13 +15,12 @@ import PULL_REQUEST_TEMPLATES from "../templates/pull_request.json" with { type:
 
 // ! TYPES
 
-export type CLType = keyof typeof CHANGELOG_TEMPLATES;
 export type CCType = keyof typeof CODE_OF_CONDUCT_TEMPLATES;
 export type CType = keyof typeof COMMIT_TEMPLATES;
 export type GAType = keyof typeof GITHUB_ACTIONS_TEMPLATES;
 export type GIType = keyof typeof GITIGNORE_TEMPLATES;
 export type IType = keyof typeof ISSUE_TEMPLATES;
-export type LType = (typeof license_choices)[number];
+export type LType = (typeof license_choices)[number]["name"];
 export type PRType = keyof typeof PULL_REQUEST_TEMPLATES;
 export type PMType = (typeof package_manager_choices)[number];
 export interface ThemeContext {
@@ -30,25 +29,24 @@ export interface ThemeContext {
   input: string;
   index: number;
 }
+export type vType = "major" | "minor" | "patch" | "none";
 
 export type initType = (typeof init_choices)[number]["name"];
 
 export interface CInterface {
   author_name: string;
   init_options: initType[];
-  package_manager: string;
-  license: string;
-  gitignore: string;
+  package_manager: PMType;
+  license: LType;
+  gitignore: GIType;
   contact: string;
   commit_type: CType;
   commit_message: string;
   is_breaking: boolean;
-  github_repo_visibility: string;
-  github_remote_protocol: string;
+  github_repo_visibility: "public" | "private";
+  github_remote_protocol: "https" | "ssh";
   github_username: string;
 }
-
-export type vType = "major" | "minor" | "patch" | "none";
 
 // ! CHOICES
 

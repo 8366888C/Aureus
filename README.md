@@ -1,6 +1,33 @@
 # Aureus
 
-A CLI tool to automate Git, GitHub repositories, husky hooks, and semantic versioning with built-in support for all major package managers.
+CLI tool to bootstrap, standardize and automate repository workflows with built-in support for all major package managers.
+
+[NPM Package](https://www.npmjs.com/package/aureus)
+
+## Key Features
+
+- Interactive project initialization with customizable components
+- Conventional commit builder with type selection
+- Automatic version bumping (major/minor/patch) based on commit messages
+- Changelog generation from commit history
+- GitHub repository creation via CLI
+- Husky hooks for commit message validation
+- GitHub Actions workflow templates
+- Issue and pull request templates
+- License and .gitignore templates
+- Multi-package manager support
+
+## Supported Package Managers
+
+- npm
+- pnpm
+- yarn
+- bun
+
+## Requirements
+
+- Node.js >= 18.0.0
+- Git
 
 ## Installation
 
@@ -14,30 +41,11 @@ yarn global add aureus
 bun add -g aureus
 ```
 
-## Quick Start
-
-```bash
-# Initialize a new project
-aureus init
-
-# Add individual components later
-aureus create license
-aureus create gitignore
-aureus create github-repo
-
-# View available templates
-aureus view license
-aureus view gitignore
-
-# Make conventional commits
-aureus commit
-```
-
 ## Commands
 
 ### `aureus init [folder]`
 
-Initialize a new project. Interactive prompts for package manager selection, then select components: license, gitignore, code-of-conduct, GitHub repo, issue templates, PR templates. By default, also adds GitHub Actions workflow and changelog.
+Initialize a new project with interactive prompts for package manager selection and customizable components.
 
 ```bash
 aureus init
@@ -47,17 +55,17 @@ aureus init my-project
 
 ### `aureus create <component>`
 
-Add individual project components:
+Add individual project components to an existing project:
 
-| Component | Description |
-|-----------|-------------|
-| `license` | Create a LICENSE file |
-| `gitignore` | Create a .gitignore template |
-| `pull-request` | Create a PR template |
-| `issue` | Create issue templates |
-| `code-of-conduct` | Create code of conduct |
-| `github-actions` | Create GitHub Actions workflow |
-| `github-repo` | Create GitHub repository |
+| Component         | Description                    |
+| ----------------- | ------------------------------ |
+| `license`         | Create a LICENSE file          |
+| `gitignore`       | Create a .gitignore template   |
+| `pull-request`    | Create a PR template           |
+| `issue`           | Create issue templates         |
+| `code-of-conduct` | Create code of conduct         |
+| `github-actions`  | Create GitHub Actions workflow |
+| `github-repo`     | Create GitHub repository       |
 
 ```bash
 aureus create license
@@ -66,7 +74,7 @@ aureus create gitignore
 
 ### `aureus view <component>`
 
-View templates without creating files (same components as `create`).
+View available templates without creating files (same components as `create`).
 
 ```bash
 aureus view license
@@ -75,20 +83,11 @@ aureus view gitignore
 
 ### `aureus commit`
 
-Interactive conventional commit builder with type selection.
+Interactive conventional commit with type selection.
 
 ```bash
 aureus commit
 ```
-
-## Supported Package Managers
-
-npm, pnpm, yarn, bun
-
-## Requirements
-
-- Node.js >= 18.0.0
-- Git
 
 ## License
 

@@ -1,5 +1,4 @@
 {
-  "skip": "",
   "AL": "### AL ###\n#Template for AL projects for Dynamics 365 Business Central\n#launch.json folder\n.vscode/\n#Cache folder\n.alcache/\n#Symbols folder\n.alpackages/\n#Snapshots folder\n.snapshots/\n#Testing Output folder\n.output/\n#Extension App-file\n*.app\n#Rapid Application Development File\nrad.json\n#Translation Base-file\n*.g.xlf\n#License-file\n*.flf\n#Test results file\nTestResults.xml",
   "Actionscript": "# Build and Release Folders\nbin-debug/\nbin-release/\n[Oo]bj/\n[Bb]in/\n\n# Other files and folders\n.settings/\n\n# Executables\n*.swf\n*.air\n*.ipa\n*.apk\n\n# Project files, i.e. `.project`, `.actionScriptProperties` and `.flexProperties`\n# should NOT be excluded as they contain compiler settings and other important\n# information for Eclipse / Flash Builder.\n",
   "Ada": "# Object file\n*.o\n\n# Ada Library Information\n*.ali\n",

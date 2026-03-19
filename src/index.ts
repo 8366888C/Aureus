@@ -30,6 +30,7 @@ import {
 } from "./utils.js";
 import { INIT, PACKAGE_MANAGER } from "./prompts.js";
 import { getConfig, saveConfig } from "./utils.js";
+import { PMType } from "./types.js";
 
 const CONFIG = getConfig();
 
@@ -50,33 +51,34 @@ program
   )
   .action(async (folder) => {
     const BASE_DIR =
-      folder == "." ? process.cwd() : path.join(process.cwd(), `${folder}`);
+      folder == "." ? process.cwd() : path.join(process.cwd(), folder);
     if (!fs.existsSync(BASE_DIR)) fs.mkdirSync(BASE_DIR, { recursive: true });
 
     const GITHUB_DIR = path.join(BASE_DIR, ".github");
-    if (!fs.existsSync(GITHUB_DIR))
-      fs.mkdirSync(GITHUB_DIR, { recursive: true });
-
     const ISSUE_DIR = path.join(GITHUB_DIR, "ISSUE_TEMPLATE");
-    if (!fs.existsSync(ISSUE_DIR)) fs.mkdirSync(ISSUE_DIR, { recursive: true });
-
     const workflows_DIR = path.join(GITHUB_DIR, "workflows");
-    if (!fs.existsSync(workflows_DIR))
-      fs.mkdirSync(workflows_DIR, { recursive: true });
 
-    const package_manager =
-      detect_package(BASE_DIR) || (await PACKAGE_MANAGER(CONFIG));
     const init_options = await INIT(CONFIG);
+    const selected_package_manager = await PACKAGE_MANAGER(CONFIG);
 
     CONFIG.init_options = init_options;
-    CONFIG.package_manager = package_manager;
+    CONFIG.package_manager = selected_package_manager;
     saveConfig(CONFIG);
 
-    await INIT_PACKAGE_MANAGER(CONFIG, package_manager, BASE_DIR);
+    const package_manager = await INIT_PACKAGE_MANAGER(
+      CONFIG,
+      selected_package_manager,
+      BASE_DIR,
+    );
+    if (!package_manager) return;
 
     INIT_GIT(BASE_DIR);
 
     INIT_HUSKY(package_manager, BASE_DIR);
+
+    INIT_GITHUB_ACTIONS(workflows_DIR);
+
+    INIT_CHANGELOG(BASE_DIR);
 
     INIT_GITIGNORE(BASE_DIR);
 
@@ -91,24 +93,18 @@ program
         case "gitignore":
           await SWITCH_GITIGNORE(CONFIG, BASE_DIR);
           break;
-        case "issue":
-          SWITCH_ISSUE(ISSUE_DIR);
+        case "pull-request":
+          await SWITCH_PULL_REQUEST(GITHUB_DIR);
           break;
         case "license":
           await SWITCH_LICENSE(CONFIG, BASE_DIR);
           break;
-        case "pull-request":
-          SWITCH_PULL_REQUEST(GITHUB_DIR);
-          break;
-        default:
-          INIT_GITHUB_ACTIONS(workflows_DIR);
-          INIT_CHANGELOG(BASE_DIR);
+        case "issue":
+          await SWITCH_ISSUE(ISSUE_DIR);
           break;
       }
     }
-    setupHooks(BASE_DIR, init_options.includes("github-actions"));
-    finalize();
-    SUCCESS("Aureus initialization complete");
+    finalize(BASE_DIR);
   });
 
 // ! SUB COMMANDS
