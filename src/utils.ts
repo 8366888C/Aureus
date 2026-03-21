@@ -200,6 +200,42 @@ export function getCommitHistory() {
 }
 
 // ! CHANGELOG
+export function getUsername() {
+  try {
+    const remoteUrl = child_process
+      .execSync("git remote get-url origin", {
+        stdio: ["pipe", "pipe", "pipe"],
+      })
+      .toString()
+      .trim();
+    // https://github.com/username/repo.git  or  git@github.com:username/repo.git
+    const match =
+      remoteUrl.match(/github\.com[:/]([^/]+)\//) ??
+      remoteUrl.match(/github\.com\/([^/]+)\//);
+    return match?.[1] ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function getRepoName() {
+  try {
+    const remoteUrl = child_process
+      .execSync("git remote get-url origin", {
+        stdio: ["pipe", "pipe", "pipe"],
+      })
+      .toString()
+      .trim();
+    // strip trailing .git if present
+    const match =
+      remoteUrl.match(/github\.com[:/][^/]+\/([^/]+?)(?:\.git)?$/) ??
+      remoteUrl.match(/github\.com\/[^/]+\/([^/]+?)(?:\.git)?$/);
+    return match?.[1] ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function getBumpType(commits: string[]) {
   let bump: vType = "none";
   for (const commit of commits) {
@@ -245,13 +281,17 @@ export function bumpVersion(type: vType) {
 export function generateChangelog(
   newVersion: string,
   commits: string[],
+  username: string,
+  repoName: string,
   template: any,
 ) {
   const changelogPath = path.join(process.cwd(), "CHANGELOG.md");
 
   // process header
   const header = template.header
-    .replace(/\[\[version\]\]/gi, newVersion)
+    .replace(/\[version\]/gi, newVersion)
+    .replace(/\[username\]/gi, username)
+    .replace(/\[repoName\]/gi, repoName)
     .replace(/\[date\]/gi, currentDate);
 
   // Initialize groups based on the template's defined sections
@@ -266,6 +306,7 @@ export function generateChangelog(
   commits.forEach((commitLine) => {
     const firstSpace = commitLine.indexOf(" ");
     const hash = commitLine.substring(0, 7);
+    const commitId = commitLine.substring(0, 40);
     const fullMessage = commitLine.substring(firstSpace + 1);
 
     const match = fullMessage.match(/^(\w+)(!)?(?:\(([^)]+)\))?:\s*(.*)$/);
@@ -280,7 +321,7 @@ export function generateChangelog(
           /\[message\]/g,
           isBreaking ? `**BREAKING:** ${message}` : message,
         )
-        .replace(/\[\[hash\]\]/g, hash);
+        .replace(/\[hash\]/g, hash);
 
       if (type === "feat") groups["features"].push(item);
       else if (type === "fix") groups["bug-fixes"].push(item);
@@ -288,7 +329,10 @@ export function generateChangelog(
     } else {
       const item = template.item
         .replace(/\[message\]/g, fullMessage)
-        .replace(/\[\[hash\]\]/g, hash);
+        .replace(/\[hash\]/g, hash)
+        .replace(/\[username\]/gi, username)
+        .replace(/\[repoName\]/gi, repoName)
+        .replace(/\[commitId\]/gi, commitId);
       other.push(item);
     }
   });
@@ -1227,6 +1271,8 @@ export async function BUMP(options: any) {
 
   const commits = getCommitHistory();
   const bumpType = getBumpType(commits);
+  const username = getUsername();
+  const repoName = getRepoName();
 
   if (bumpType === "none") {
     WARN("No feature or fix commits found. Skipping version bump");
@@ -1237,6 +1283,8 @@ export async function BUMP(options: any) {
     const changelogContent = generateChangelog(
       newVersion!,
       commits,
+      username!,
+      repoName!,
       changelog.template,
     );
 

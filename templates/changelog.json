@@ -1,10 +1,10 @@
 {
   "default": {
-    "header": "## [[version]] - [date]\n",
+    "header": "## [[version]](https://github.com/[username]/[repoName]/releases/tag/[version]) - [date]\n",
     "sections": {
       "features": "### Features\n",
       "bug-fixes": "### Bug Fixes\n"
     },
-    "item": "- [message] [[hash]]\n"
+    "item": "- [message] [[hash](https://github.com/[username]/[repoName]/commit/[commitId])]\n"
   }
 }
