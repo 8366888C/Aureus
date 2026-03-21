@@ -1,3 +1,10 @@
+## [1.5.1](https://github.com/8366888C/aureus/compare/v1.5.0...v1.5.1) (2026-03-21)
+
+
+### Bug Fixes
+
+* add links for version and commit hash ([a2b9861](https://github.com/8366888C/aureus/commit/a2b98615d72161a2213958da19cff32d92717807))
+
 # [1.5.0](https://github.com/8366888C/aureus/compare/v1.4.0...v1.5.0) (2026-03-19)
 
 
