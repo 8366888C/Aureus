@@ -1,3 +1,10 @@
+## [1.5.2](https://github.com/8366888C/aureus/compare/v1.5.1...v1.5.2) (2026-03-23)
+
+
+### Bug Fixes
+
+* add other section in the changelog generation template ([03dd79d](https://github.com/8366888C/aureus/commit/03dd79d77a50f588a5276bda8b698f653e16d1b1))
+
 ## [1.5.1](https://github.com/8366888C/aureus/compare/v1.5.0...v1.5.1) (2026-03-21)
 
 
