@@ -1,10 +1,11 @@
 {
   "default": {
-    "header": "## [[version]](https://github.com/[username]/[repoName]/releases/tag/[version]) - [date]\n",
+    "header": "## [v[version]](https://github.com/[username]/[repoName]/releases/tag/v[version]) | [date]\n",
     "sections": {
       "features": "### Features\n",
-      "bug-fixes": "### Bug Fixes\n"
+      "bug-fixes": "### Bug Fixes\n",
+      "other": "### Other\n"
     },
-    "item": "- [message] [[hash](https://github.com/[username]/[repoName]/commit/[commitId])]\n"
+    "item": "- [message] [[hash]](https://github.com/[username]/[repoName]/commit/[hash])\n"
   }
 }

@@ -300,13 +300,10 @@ export function generateChangelog(
     groups[key] = [];
   });
 
-  const other: string[] = [];
-
   // parse commits
   commits.forEach((commitLine) => {
     const firstSpace = commitLine.indexOf(" ");
     const hash = commitLine.substring(0, 7);
-    const commitId = commitLine.substring(0, 40);
     const fullMessage = commitLine.substring(firstSpace + 1);
 
     const match = fullMessage.match(/^(\w+)(!)?(?:\(([^)]+)\))?:\s*(.*)$/);
@@ -321,19 +318,20 @@ export function generateChangelog(
           /\[message\]/g,
           isBreaking ? `**BREAKING:** ${message}` : message,
         )
-        .replace(/\[hash\]/g, hash);
+        .replace(/\[hash\]/g, hash)
+        .replace(/\[username\]/gi, username)
+        .replace(/\[repoName\]/gi, repoName);
 
       if (type === "feat") groups["features"].push(item);
       else if (type === "fix") groups["bug-fixes"].push(item);
-      else other.push(item);
+      else groups["other"].push(item);
     } else {
       const item = template.item
         .replace(/\[message\]/g, fullMessage)
         .replace(/\[hash\]/g, hash)
         .replace(/\[username\]/gi, username)
-        .replace(/\[repoName\]/gi, repoName)
-        .replace(/\[commitId\]/gi, commitId);
-      other.push(item);
+        .replace(/\[repoName\]/gi, repoName);
+      groups["other"].push(item);
     }
   });
 
@@ -347,6 +345,11 @@ export function generateChangelog(
   // add bug fixes
   if (groups["bug-fixes"].length) {
     body += `${template.sections["bug-fixes"]}${groups["bug-fixes"].join("")}`;
+  }
+
+  // add other
+  if (groups["other"].length) {
+    body += `${template.sections["other"]}${groups["other"].join("")}`;
   }
 
   const releaseEntry = `${header}\n${body}\n`;
@@ -402,7 +405,7 @@ export function setupHooks(BASE_DIR: string, package_manager?: PMType) {
     // SUCCESS("Successfully setup commit-msg hook");
 
     const prePushPath = path.join(huskyDir, "pre-push");
-    const prePushHook = `\n${signature}\nif [ "$AUREUS_INTERNAL_PUSH" = "true" ]; then\n  exit 0\nfi\nnpx aureus bump\n`;
+    const prePushHook = `\n${signature}\nif [ "$AUREUS_INTERNAL_PUSH" = "true" ]; then\n  exit 0\nfi\nnpx aureus bump --remote $1\n`;
     let prePushContent = "";
     if (fs.existsSync(prePushPath)) {
       prePushContent = fs.readFileSync(prePushPath, "utf-8");
@@ -792,10 +795,10 @@ export function INIT_GIT(BASE_DIR: string) {
     } else {
       INFO("Git repository already detected");
     }
-    child_process.execSync("git config --local push.followTags true", {
-      stdio: "ignore",
-      cwd: BASE_DIR,
-    });
+    // child_process.execSync("git config --local push.followTags true", {
+    //   stdio: "ignore",
+    //   cwd: BASE_DIR,
+    // });
   } catch (e) {
     ERROR(`Failed to initialize git repository: ${e}`);
   }
@@ -1222,7 +1225,7 @@ export async function VIEW_GITHUB_ACTIONS() {
 export async function VIEW_HUSKY_HOOKS() {
   const signature = "# aureus-setup-anchor";
   const commitMsgHook = `#!/bin/sh\n\n${signature}\nnpx aureus verify -- $1\n`;
-  const prePushHook = `#!/bin/sh\n\n${signature}\nif [ "$AUREUS_INTERNAL_PUSH" = "true" ]; then\n  exit 0\nfi\nnpx aureus bump\n`;
+  const prePushHook = `#!/bin/sh\n\n${signature}\nif [ "$AUREUS_INTERNAL_PUSH" = "true" ]; then\n  exit 0\nfi\nnpx aureus bump --remote $1\n`;
 
   try {
     console.log("commit-msg hook:");
@@ -1299,18 +1302,49 @@ export async function BUMP(options: any) {
     fs.writeFileSync(changelogPath, changelogContent);
 
     // git operations
-    child_process.execSync("git add package.json CHANGELOG.md", {
+    child_process.execSync(`git add package.json CHANGELOG.md`, {
       stdio: "inherit",
     });
-    child_process.execSync(`git commit -m "chore(bump): ${newVersion}"`, {
-      stdio: "inherit",
-    });
+    child_process.execSync(
+      `git commit -m "chore: bump to v${newVersion} from aureus"`,
+      {
+        stdio: "inherit",
+      },
+    );
     child_process.execSync(
       `git tag -a v${newVersion} -m "release ${newVersion}"`,
       {
         stdio: "inherit",
       },
     );
+
     SUCCESS(`Successfully bumped to version ${newVersion}`);
+
+    // push changes and tags
+    const remote = options.remote || "origin";
+    const branch = child_process
+      .execSync("git rev-parse --abbrev-ref HEAD")
+      .toString()
+      .trim();
+    if (branch === "HEAD") {
+      ERROR(
+        "You are in a detached HEAD state. Please checkout a branch before pushing.\nBump commit and tag were created locally.\nRun manually: git push --follow-tags " +
+          remote +
+          " HEAD",
+      );
+      process.exit(1);
+    }
+    try {
+      child_process.execSync(`git push --follow-tags ${remote} ${branch}`, {
+        stdio: "inherit",
+        env: { ...process.env, AUREUS_INTERNAL_PUSH: "true" },
+      });
+    } catch (e: any) {
+      const detail = e.stderr?.toString().trim();
+      ERROR(
+        `Bump commit and tag created locally but push failed.${detail ? `\n${detail}` : ""}\nRun manually: git push --follow-tags ${remote} HEAD`,
+      );
+      process.exit(1);
+    }
   }
 }
