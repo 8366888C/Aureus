@@ -111,7 +111,7 @@ When you run `aureus create husky-hooks` or select husky support during `aureus 
 - **commit-msg** - runs `aureus verify` to enforce conventional commits
 - **pre-push** - runs `aureus bump` to bump versions and update changelog before pushing
 
-### Configuration
+## Configuration
 
 Aureus keeps user preferences in `~/.aureus/config.json` and reuses them across runs
 
@@ -126,6 +126,6 @@ Aureus keeps user preferences in `~/.aureus/config.json` and reuses them across 
 | `github_username`        | Your GitHub username              |         |
 | `contact`                | Contact email for code of conduct |         |
 
-### License
+## License
 
 This OSS is licensed under [MIT](https://github.com/8366888C/Aureus/blob/main/LICENSE)
