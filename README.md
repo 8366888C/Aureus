@@ -1,6 +1,19 @@
-# aureus
+# Aureus
 
-A CLI tool to bootstrap, standardize, and automate repository workflows. Quickly set up new projects with modern development practices, commit conventions, semantic versioning, and GitHub integration.
+CLI tool to bootstrap, standardize and automate repository workflows. It sets up modern project scaffolding, commit conventions, semantic versioning and GitHub integration with minimal manual work
+
+## Features
+
+- Standardize commit messages with conventional commits
+- Husky hooks for commit message validation and version bumping
+- Semantic versioning and changelog generation
+- GitHub integration with GitHub Actions
+- GitHub repository creation with GitHub CLI
+- License and code of conduct generation
+- Pull request template generation
+- GitHub issue template generation
+
+Aureus supports npm, pnpm, yarn and bun, and auto detects whichever is already in use in the target project when possible
 
 ## Installation
 
@@ -8,146 +21,107 @@ A CLI tool to bootstrap, standardize, and automate repository workflows. Quickly
 npm install -g aureus
 ```
 
-## Quick Start
+### Requirements
+
+- Node.js 18 or newer
+- Git
+- [Github CLI](https://cli.github.com/) optional but required for `github-repo` features
+
+### Quick Start
 
 ```bash
-# Initialize a new project
+# initialize a new project in a folder
 aureus init my-project
 
-# Or scaffold the current directory
+# or scaffold the current directory
 aureus init
+
+# or use npx
+npx aureus init my-project
+npx aureus init
 ```
+
+---
 
 ## Commands
 
-### `aureus init [folder]`
+#### `aureus init [folder]`
 
-Scaffolds a complete project setup. Defaults to the current directory.
+Initialize a new repository in `folder` (defaults to current directory)
 
-Sets up git, a package manager, husky hooks, GitHub Actions, and any components you select:
+#### `aureus create <component>`
 
-- `license` — LICENSE file (60+ options)
-- `gitignore` — language/framework-specific .gitignore (100+ templates)
-- `pull-request` — PR template
-- `issue` — GitHub issue templates (bug report, feature request, config)
-- `code-of-conduct` — Contributor Covenant code of conduct
-- `github-repo` — creates and configures a GitHub repository
+Add these components to an existing project on demand:
 
----
+- license
+- gitignore
+- pull-request
+- issue
+- code-of-conduct
+- husky-hooks
+- github-actions
+- github-repo
 
-### `aureus create <component>`
+#### `aureus view <component>`
 
-Add individual components to an existing project.
+Preview templates and configuration before creating them
 
-```bash
-aureus create license
-aureus create gitignore
-aureus create pull-request
-aureus create issue
-aureus create code-of-conduct
-aureus create husky-hooks
-aureus create github-actions
-aureus create github-repo
-```
+#### `aureus commit`
 
----
+Interactive helper for conventional commits
 
-### `aureus view <component>`
+It guides you through selecting a commit type, adding an optional scope, writing the message and flagging breaking changes
 
-Preview a template before creating it.
+Supported types:
 
-```bash
-aureus view license
-aureus view gitignore
-aureus view pull-request
-aureus view issue
-aureus view code-of-conduct
-aureus view husky-hooks
-aureus view github-actions
-```
+| TYPE         | DESCRIPTION                          |
+| ------------ | ------------------------------------ |
+| **feat**     | A new feature                        |
+| **fix**      | A bug fix                            |
+| **refactor** | Code rewrites or restructure         |
+| **build**    | Changes that affect build components |
+| **chore**    | Changes that do not modify app logic |
+| **test**     | Add or correct tests                 |
+| **ops**      | Changes to operational components    |
+| **revert**   | Reverts a previous commit            |
 
----
+#### `aureus bump [--dry-run]`
 
-### `aureus commit`
-
-Interactive conventional commit prompt.
-
-Guides you through selecting a commit type, writing a message, and flagging breaking changes. Supported types:
-
-| Type | Description |
-|------|-------------|
-| `feat` | A new feature |
-| `fix` | A bug fix |
-| `refactor` | Code rewrites or restructure |
-| `build` | Changes that affect build components |
-| `chore` | Changes that don't modify the main app |
-| `test` | Add or correct tests |
-| `ops` | Changes to operational components |
-| `revert` | Reverts a previous commit |
-
----
-
-### `aureus verify [file]`
-
-Validates a commit message file against the conventional commits spec. Used automatically by the `commit-msg` husky hook.
-
-```bash
-aureus verify .git/COMMIT_EDITMSG
-```
-
-Exits with code `1` if the message is invalid.
-
----
-
-### `aureus bump [--dry-run]`
-
-Analyzes commits since the last tag, determines the appropriate semantic version bump, updates `package.json`, generates a changelog entry, and creates a git tag.
+Analyze commits since the last tag, determine the correct semantic version bump, update `package.json`, generate a changelog entry and create a git tag
 
 ```bash
 # Preview without applying changes
 aureus bump --dry-run
 ```
 
-Typically triggered automatically by the `pre-push` husky hook.
+This is typically wired into the `pre-push` husky hook so that versioning and changelog are kept in sync automatically
 
----
+#### `aureus create husky-hooks`
 
-## Husky Hooks
+Generate or update husky hooks in `.husky` and wire them to `aureus verify` and `aureus bump`. Existing hook files are preserved and extended when possible
 
-When you run `aureus create husky-hooks` (or select it during `init`), two hooks are installed:
+When you run `aureus create husky-hooks` or select husky support during `aureus init`, the following hooks are configured:
 
-- **`commit-msg`** — runs `aureus verify` to enforce conventional commits
-- **`pre-push`** — runs `aureus bump` to auto-version and tag before pushing
+- **commit-msg** - runs `aureus verify` to enforce conventional commits
+- **pre-push** - runs `aureus bump` to bump versions and update changelog before pushing
 
----
+### Configuration
 
-## Configuration
+Aureus keeps user preferences in `~/.aureus/config.json` and reuses them across runs
 
-Preferences are saved to `~/.aureus/config.json` and reused as defaults on subsequent runs.
+Configuration keys:
 
-| Key | Description | Default |
-|-----|-------------|---------|
-| `author_name` | Your name | `""` |
-| `package_manager` | Preferred package manager | `"pnpm"` |
-| `license` | Default license | `"mit"` |
-| `gitignore` | Default .gitignore template | `"Node"` |
-| `github_repo_visibility` | Repository visibility | `"public"` |
-| `github_remote_protocol` | Remote URL protocol | `"ssh"` |
-| `github_username` | Your GitHub username | `""` |
-| `contact` | Contact email for code of conduct | `""` |
+| Key                      | Description                       | Default    |
+| ------------------------ | --------------------------------- | ---------- |
+| `author_name`            | Default author name               | `""`       |
+| `package_manager`        | Preferred package manager         | `"pnpm"`   |
+| `license`                | Default license                   | `"mit"`    |
+| `gitignore`              | Default .gitignore template       | `"node"`   |
+| `github_repo_visibility` | GitHub repository visibility      | `"public"` |
+| `github_remote_protocol` | Git remote protocol               | `"ssh"`    |
+| `github_username`        | Your GitHub username              | `""`       |
+| `contact`                | Contact email for code of conduct | `""`       |
 
----
+### License
 
-## Requirements
-
-- Node.js >= 18
-- Git
-- [GitHub CLI](https://cli.github.com/) (`gh`) — optional, required for `github-repo` features
-
-## Package Manager Support
-
-Aureus supports npm, pnpm, yarn, and bun, with auto-detection of whichever is already in use.
-
-## License
-
-MIT
+OSS licensed under [MIT](https://github.com/8366888C/Aureus/blob/main/LICENSE)

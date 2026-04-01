@@ -3,38 +3,16 @@ import Enquirer from "enquirer";
 const { prompt } = Enquirer;
 import { stdout } from "node:process";
 import child_process, { execSync, spawnSync } from "node:child_process";
-import fs, { existsSync } from "node:fs";
+import fs from "node:fs";
 import path from "node:path";
-import os, { release } from "node:os";
+import os from "node:os";
 import { CInterface, commit_types, IType, PMType, vType } from "./types.js";
-import {
-  CHANGELOG,
-  CODE_OF_CONDUCT,
-  COMMIT,
-  GITHUB_ACTIONS,
-  GITHUB_REMOTE_PROTOCOL,
-  GITHUB_REPO_VISIBILITY,
-  GITIGNORE,
-  INSTALL_GITHUB_CLI,
-  INSTALL_PM,
-  ISSUE,
-  LICENSE,
-  OVERWRITE,
-  PULL_REQUEST,
-} from "./prompts.js";
+import { CHANGELOG, CODE_OF_CONDUCT, COMMIT, GITHUB_ACTIONS, GITHUB_REMOTE_PROTOCOL, GITHUB_REPO_VISIBILITY, GITIGNORE, INSTALL_GITHUB_CLI, INSTALL_PM, ISSUE, LICENSE, OVERWRITE, PULL_REQUEST } from "./prompts.js";
 
 // ! PROMPTS
 const dynamicLimit = Math.max(1, (stdout.rows || 8) - 4);
 
-export async function input<TShape>({
-  name,
-  message,
-  initial,
-}: {
-  name: string;
-  message: string;
-  initial: string;
-}) {
+export async function input<TShape>({ name, message, initial }: { name: string; message: string; initial: string }) {
   return await prompt<TShape>({
     type: "input",
     name: name,
@@ -44,20 +22,7 @@ export async function input<TShape>({
   } as any);
 }
 
-export async function autocomplete<TShape>({
-  name,
-  message,
-  choices,
-  initial,
-}: {
-  name: string;
-  message: string;
-  choices:
-    | string[]
-    | { name: string; message: string; hint: string }[]
-    | { name: string; message: string }[];
-  initial?: any;
-}) {
+export async function autocomplete<TShape>({ name, message, choices, initial }: { name: string; message: string; choices: string[] | { name: string; message: string; hint: string }[] | { name: string; message: string }[]; initial?: any }) {
   return await prompt<TShape>({
     type: "autocomplete",
     name: name,
@@ -70,15 +35,7 @@ export async function autocomplete<TShape>({
   } as any);
 }
 
-export async function confirm<TShape>({
-  name,
-  message,
-  initial,
-}: {
-  name: string;
-  message: string;
-  initial?: any;
-}) {
+export async function confirm<TShape>({ name, message, initial }: { name: string; message: string; initial?: any }) {
   return await prompt<TShape>({
     type: "confirm",
     name: name,
@@ -88,20 +45,7 @@ export async function confirm<TShape>({
   } as any);
 }
 
-export async function multiselect<TShape>({
-  name,
-  message,
-  choices,
-  initial,
-}: {
-  name: string;
-  message: string;
-  choices:
-    | string[]
-    | { name: string; message: string; hint: string }[]
-    | { name: string; message: string }[];
-  initial?: any;
-}) {
+export async function multiselect<TShape>({ name, message, choices, initial }: { name: string; message: string; choices: string[] | { name: string; message: string; hint: string }[] | { name: string; message: string }[]; initial?: any }) {
   return await prompt<TShape>({
     type: "multiselect",
     name: name,
@@ -135,14 +79,7 @@ export const theme = {
 // ! CONSTANTS
 const DEFAULT_CONFIG: CInterface = {
   author_name: "",
-  init_options: [
-    "code-of-conduct",
-    "github-repo",
-    "gitignore",
-    "issue",
-    "license",
-    "pull-request",
-  ],
+  init_options: ["code-of-conduct", "github-repo", "gitignore", "issue", "license", "pull-request"],
   package_manager: "pnpm",
   license: "mit",
   gitignore: "Node",
@@ -156,19 +93,12 @@ const DEFAULT_CONFIG: CInterface = {
 };
 const currentDate = new Date().toISOString().split("T")[0];
 export const currentYear = new Date().getFullYear().toString();
-export const SUCCESS = (m?: string) =>
-  m
-    ? console.log(pc.bgGreen(pc.bold(" SUCCESS ")) + pc.green(` → ${m}`))
-    : console.log(pc.bgGreen(pc.bold(" SUCCESS ")));
+export const SUCCESS = (m?: string) => (m ? console.log(pc.bgGreen(pc.bold(" SUCCESS ")) + pc.green(` → ${m}`)) : console.log(pc.bgGreen(pc.bold(" SUCCESS "))));
 export const ERROR = (e: unknown) => {
-  e
-    ? console.error(pc.bgRed(pc.bold(" ERROR ")) + pc.red(` → ${e}`))
-    : console.error(pc.bgRed(pc.bold(" ERROR ")));
+  e ? console.error(pc.bgRed(pc.bold(" ERROR ")) + pc.red(` → ${e}`)) : console.error(pc.bgRed(pc.bold(" ERROR ")));
 };
-export const INFO = (m: string) =>
-  console.log(pc.bgWhite(pc.bold(pc.black(" INFO "))) + pc.white(` → ${m}`));
-export const WARN = (m: unknown) =>
-  console.warn(pc.bgYellow(pc.bold(pc.black(" WARN "))) + pc.yellow(` → ${m}`));
+export const INFO = (m: string) => console.log(pc.bgWhite(pc.bold(pc.black(" INFO "))) + pc.white(` → ${m}`));
+export const WARN = (m: unknown) => console.warn(pc.bgYellow(pc.bold(pc.black(" WARN "))) + pc.yellow(` → ${m}`));
 
 // ! COMMIT
 export function getCommitHistory() {
@@ -188,10 +118,7 @@ export function getCommitHistory() {
     return logs.split("\n").filter(Boolean);
   } catch (e) {
     try {
-      const logs = child_process
-        .execSync("git log --oneline", { stdio: "pipe" })
-        .toString()
-        .trim();
+      const logs = child_process.execSync("git log --oneline", { stdio: "pipe" }).toString().trim();
       return logs.split("\n").filter(Boolean);
     } catch (e) {
       return [];
@@ -209,9 +136,7 @@ export function getUsername() {
       .toString()
       .trim();
     // https://github.com/username/repo.git  or  git@github.com:username/repo.git
-    const match =
-      remoteUrl.match(/github\.com[:/]([^/]+)\//) ??
-      remoteUrl.match(/github\.com\/([^/]+)\//);
+    const match = remoteUrl.match(/github\.com[:/]([^/]+)\//) ?? remoteUrl.match(/github\.com\/([^/]+)\//);
     return match?.[1] ?? undefined;
   } catch {
     return undefined;
@@ -227,9 +152,7 @@ export function getRepoName() {
       .toString()
       .trim();
     // strip trailing .git if present
-    const match =
-      remoteUrl.match(/github\.com[:/][^/]+\/([^/]+?)(?:\.git)?$/) ??
-      remoteUrl.match(/github\.com\/[^/]+\/([^/]+?)(?:\.git)?$/);
+    const match = remoteUrl.match(/github\.com[:/][^/]+\/([^/]+?)(?:\.git)?$/) ?? remoteUrl.match(/github\.com\/[^/]+\/([^/]+?)(?:\.git)?$/);
     return match?.[1] ?? undefined;
   } catch {
     return undefined;
@@ -240,10 +163,7 @@ export function getBumpType(commits: string[]) {
   let bump: vType = "none";
   for (const commit of commits) {
     const message = commit.split(" ").slice(1).join(" ");
-    if (
-      message.includes("!") ||
-      message.toLowerCase().includes("breaking change")
-    ) {
+    if (message.includes("!") || message.toLowerCase().includes("breaking change")) {
       return "major";
     }
     if (message.toLowerCase().startsWith("feat")) {
@@ -278,13 +198,7 @@ export function bumpVersion(type: vType) {
   return bumpVersion;
 }
 
-export function generateChangelog(
-  newVersion: string,
-  commits: string[],
-  username: string,
-  repoName: string,
-  template: any,
-) {
+export function generateChangelog(newVersion: string, commits: string[], username: string, repoName: string, template: any) {
   const changelogPath = path.join(process.cwd(), "CHANGELOG.md");
 
   // process header
@@ -311,13 +225,12 @@ export function generateChangelog(
     if (match) {
       const type = match[1].toLowerCase();
       const isBreaking = match[2] === "!";
+      const scope = match[3];
       const message = match[4];
+      const displayMessage = scope ? `${scope}: ${message}` : message;
 
       const item = template.item
-        .replace(
-          /\[message\]/g,
-          isBreaking ? `**BREAKING:** ${message}` : message,
-        )
+        .replace(/\[message\]/g, isBreaking ? `**BREAKING:** ${displayMessage}` : displayMessage)
         .replace(/\[hash\]/g, hash)
         .replace(/\[username\]/gi, username)
         .replace(/\[repoName\]/gi, repoName);
@@ -361,9 +274,7 @@ export function generateChangelog(
   }
 
   const title = "# CHANGELOG\n\n";
-  const finalContent = existingContent.includes("# CHANGELOG")
-    ? existingContent.replace(title, `${title}${releaseEntry}`)
-    : `${title}${releaseEntry}${existingContent}`;
+  const finalContent = existingContent.includes("# CHANGELOG") ? existingContent.replace(title, `${title}${releaseEntry}`) : `${title}${releaseEntry}${existingContent}`;
 
   return finalContent;
   // fs.writeFileSync(changelogPath, finalContent);
@@ -405,7 +316,7 @@ export function setupHooks(BASE_DIR: string, package_manager?: PMType) {
     // SUCCESS("Successfully setup commit-msg hook");
 
     const prePushPath = path.join(huskyDir, "pre-push");
-    const prePushHook = `\n${signature}\nif [ "$AUREUS_INTERNAL_PUSH" = "true" ]; then\n  exit 0\nfi\nnpx aureus bump --remote $1\n`;
+    const prePushHook = `\n${signature}\nif [ "$AUREUS_INTERNAL_PUSH" = "true" ]; then\n  exit 0\nfi\nnpx aureus bump && exit 0\n`;
     let prePushContent = "";
     if (fs.existsSync(prePushPath)) {
       prePushContent = fs.readFileSync(prePushPath, "utf-8");
@@ -421,14 +332,12 @@ export function setupHooks(BASE_DIR: string, package_manager?: PMType) {
 
     const preCommitPath = path.join(huskyDir, "pre-commit");
     const preCommitHook = "";
-    if (fs.existsSync(preCommitPath))
-      fs.writeFileSync(preCommitPath, preCommitHook);
+    if (fs.existsSync(preCommitPath)) fs.writeFileSync(preCommitPath, preCommitHook);
     SUCCESS("Generated default husky hooks");
   } catch (e) {
     ERROR(`Failed to setup husky hooks: ${e}`);
   }
 }
-0;
 
 // ! GITHUB
 // export function checkGithubStatus(): { loggedIn: boolean; user?: string } {
@@ -472,17 +381,10 @@ export function checkGithubStatus(): { loggedIn: boolean; user?: string } {
 
 export async function installGithubCLI(): Promise<boolean> {
   const platform = os.platform();
-  const installCmd =
-    platform === "win32"
-      ? "winget install --id Github.cli"
-      : platform === "darwin"
-        ? "brew install gh"
-        : null;
+  const installCmd = platform === "win32" ? "winget install --id Github.cli" : platform === "darwin" ? "brew install gh" : null;
 
   if (!installCmd) {
-    WARN(
-      "Automatic installation of Github CLI (gh) is not supported on this platform currently. Please install it manually from https://cli.github.com/",
-    );
+    WARN("Automatic installation of Github CLI (gh) is not supported on this platform currently. Please install it manually from https://cli.github.com/");
     return false;
   }
 
@@ -506,11 +408,7 @@ export function getConfig() {
   }
   const default_config = DEFAULT_CONFIG;
   if (!fs.existsSync(CONFIG_PATH)) {
-    fs.writeFileSync(
-      CONFIG_PATH,
-      JSON.stringify(default_config, null, 2),
-      "utf-8",
-    );
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(default_config, null, 2), "utf-8");
   }
   const config = JSON.parse(fs.readFileSync(CONFIG_PATH, "utf-8"));
   return {
@@ -530,14 +428,8 @@ export function saveConfig(data: Partial<CInterface>) {
 
 // ! LICENSE
 // export const LChoices =
-export function imprintLicense(
-  template: string,
-  name: string,
-  year: string,
-): string {
-  return template
-    .replace(/\[year\]|<year>|\[yyyy\]/gi, year)
-    .replace(/\[fullname\]|<name of author>|\[name\]/gi, name);
+export function imprintLicense(template: string, name: string, year: string): string {
+  return template.replace(/\[year\]|<year>|\[yyyy\]/gi, year).replace(/\[fullname\]|<name of author>|\[name\]/gi, name);
 }
 
 // ! CODE OF CONDUCT
@@ -549,17 +441,11 @@ export function imprintCodeOfConduct(template: string, contact: string) {
 export function finalize(BASE_DIR: string) {
   try {
     child_process.execSync(`git add .`, { stdio: "inherit", cwd: BASE_DIR });
-    child_process.execSync(
-      `git commit -m "chore: initial commit from aureus"`,
-      {
-        stdio: "inherit",
-        cwd: BASE_DIR,
-      },
-    );
-    const branch = child_process
-      .execSync("git rev-parse --abbrev-ref HEAD", { cwd: BASE_DIR })
-      .toString()
-      .trim();
+    child_process.execSync(`git commit -m "chore: initial commit from aureus"`, {
+      stdio: "inherit",
+      cwd: BASE_DIR,
+    });
+    const branch = child_process.execSync("git rev-parse --abbrev-ref HEAD", { cwd: BASE_DIR }).toString().trim();
 
     child_process.execSync(`git push origin ${branch}`, {
       stdio: "ignore",
@@ -600,8 +486,7 @@ export function detect_package(BASE_DIR: string) {
 
       if (pkg.packageManager) {
         const [name] = pkg.packageManager.split("@");
-        if (["npm", "pnpm", "yarn", "bun"].includes(name))
-          return name as PMType;
+        if (["npm", "pnpm", "yarn", "bun"].includes(name)) return name as PMType;
       }
 
       if (pkg.engines) {
@@ -617,8 +502,7 @@ export function detect_package(BASE_DIR: string) {
   while (currentDir !== root) {
     const parentDir = path.dirname(currentDir);
 
-    if (fs.existsSync(path.join(parentDir, "pnpm-workspace.yaml")))
-      return "pnpm";
+    if (fs.existsSync(path.join(parentDir, "pnpm-workspace.yaml"))) return "pnpm";
     const parentPkgPath = path.join(parentDir, "package.json");
     if (fs.existsSync(parentPkgPath)) {
       try {
@@ -666,22 +550,13 @@ export function detect_code_of_conduct(BASE_DIR: string) {
 }
 
 // ! INIT
-export async function INIT_PACKAGE_MANAGER(
-  CONFIG: CInterface,
-  selected_package_manager: PMType,
-  BASE_DIR: string,
-) {
+export async function INIT_PACKAGE_MANAGER(CONFIG: CInterface, selected_package_manager: PMType, BASE_DIR: string) {
   let package_manager = selected_package_manager;
   let skipInit = false;
   const detected_package_manager = detect_package(BASE_DIR);
-  if (
-    detected_package_manager &&
-    detected_package_manager !== selected_package_manager
-  ) {
+  if (detected_package_manager && detected_package_manager !== selected_package_manager) {
     skipInit = true;
-    WARN(
-      `${detected_package_manager} found in the project root but selected package manager is ${package_manager}`,
-    );
+    WARN(`${detected_package_manager} found in the project root but selected package manager is ${package_manager}`);
     INFO(`Using ${detected_package_manager} for installation`);
     package_manager = detected_package_manager;
   }
@@ -711,9 +586,7 @@ export async function INIT_PACKAGE_MANAGER(
         }
         SUCCESS(`${package_manager} installed successfully`);
       } catch (e) {
-        ERROR(
-          `Failed to install ${package_manager}. Please install it manually: ${e}`,
-        );
+        ERROR(`Failed to install ${package_manager}. Please install it manually: ${e}`);
         return;
       }
     } else {
@@ -868,16 +741,8 @@ export function INIT_GITIGNORE(BASE_DIR: string) {
 
     const content = fs.readFileSync(gitignorePath, "utf-8");
     if (!content.includes(comment)) {
-      const separator = content.endsWith("\n\\n")
-        ? ""
-        : content.endsWith("\n")
-          ? "\n"
-          : "\n\n";
-      fs.appendFileSync(
-        gitignorePath,
-        `${separator}${gitignore}` + "\n",
-        "utf-8",
-      );
+      const separator = content.endsWith("\n\\n") ? "" : content.endsWith("\n") ? "\n" : "\n\n";
+      fs.appendFileSync(gitignorePath, `${separator}${gitignore}` + "\n", "utf-8");
       // SUCCESS("Appended aureus default gitignore");
     }
   } catch (e) {
@@ -889,8 +754,7 @@ export async function INIT_GITHUB_ACTIONS(workflows_DIR: string) {
   const releasePath = path.join(workflows_DIR, "aureus-release.yml");
   const github_actions = GITHUB_ACTIONS();
   try {
-    if (!fs.existsSync(workflows_DIR))
-      fs.mkdirSync(workflows_DIR, { recursive: true });
+    if (!fs.existsSync(workflows_DIR)) fs.mkdirSync(workflows_DIR, { recursive: true });
 
     fs.writeFileSync(releasePath, github_actions.template);
     SUCCESS(`Generated github actions workflow`);
@@ -910,11 +774,7 @@ export async function INIT_CHANGELOG(BASE_DIR: string) {
 }
 
 // ! SWITCH
-export async function SWITCH_CODE_OF_CONDUCT(
-  CONFIG: CInterface,
-  BASE_DIR: string,
-  GITHUB_DIR: string,
-) {
+export async function SWITCH_CODE_OF_CONDUCT(CONFIG: CInterface, BASE_DIR: string, GITHUB_DIR: string) {
   try {
     const existingPath = detect_code_of_conduct(BASE_DIR);
     if (existingPath) {
@@ -924,12 +784,8 @@ export async function SWITCH_CODE_OF_CONDUCT(
     }
     const code_of_conduct = CODE_OF_CONDUCT(CONFIG);
 
-    if (!fs.existsSync(GITHUB_DIR))
-      fs.mkdirSync(GITHUB_DIR, { recursive: true });
-    fs.writeFileSync(
-      path.join(GITHUB_DIR, "CODE_OF_CONDUCT.md"),
-      (await code_of_conduct).template,
-    );
+    if (!fs.existsSync(GITHUB_DIR)) fs.mkdirSync(GITHUB_DIR, { recursive: true });
+    fs.writeFileSync(path.join(GITHUB_DIR, "CODE_OF_CONDUCT.md"), (await code_of_conduct).template);
     CONFIG.contact = (await code_of_conduct).res.contact;
     saveConfig(CONFIG);
     SUCCESS(`Generated contributor-covenant template`);
@@ -938,11 +794,7 @@ export async function SWITCH_CODE_OF_CONDUCT(
   }
 }
 
-export async function SWITCH_GITHUB_REPO(
-  CONFIG: CInterface,
-  folder: string,
-  BASE_DIR: string,
-) {
+export async function SWITCH_GITHUB_REPO(CONFIG: CInterface, folder: string, BASE_DIR: string) {
   let status = checkGithubStatus();
 
   // check gh cli package
@@ -988,12 +840,7 @@ export async function SWITCH_GITHUB_REPO(
       CONFIG.github_repo_visibility = github_repo_visibility;
       saveConfig(CONFIG);
 
-      const repo_args = [
-        "repo",
-        "create",
-        `${username}/${repoName}`,
-        `--${github_repo_visibility}`,
-      ];
+      const repo_args = ["repo", "create", `${username}/${repoName}`, `--${github_repo_visibility}`];
       child_process.spawnSync("gh", repo_args, {
         stdio: ["ignore", "inherit", "inherit"],
         cwd: BASE_DIR,
@@ -1010,10 +857,7 @@ export async function SWITCH_GITHUB_REPO(
     CONFIG.github_remote_protocol = github_remote_protocol;
     saveConfig(CONFIG);
 
-    const remoteUrl =
-      github_remote_protocol === "https"
-        ? `https://github.com/${username}/${repoName}.git`
-        : `git@github.com:${username}/${repoName}.git`;
+    const remoteUrl = github_remote_protocol === "https" ? `https://github.com/${username}/${repoName}.git` : `git@github.com:${username}/${repoName}.git`;
 
     try {
       const existingRemote = child_process
@@ -1119,10 +963,7 @@ export async function SWITCH_PULL_REQUEST(GITHUB_DIR: string) {
       const overwrite = await OVERWRITE("PULL_REQUEST_TEMPLATE");
       if (!overwrite) return;
     }
-    fs.writeFileSync(
-      path.join(GITHUB_DIR, "PULL_REQUEST_TEMPLATE.md"),
-      pull_request.template,
-    );
+    fs.writeFileSync(path.join(GITHUB_DIR, "PULL_REQUEST_TEMPLATE.md"), pull_request.template);
     SUCCESS(`Generated pull request template`);
   } catch (e) {
     ERROR(`Failed to creaate pull request template: ${e}`);
@@ -1179,7 +1020,7 @@ export async function VIEW_GITIGNORE(CONFIG: CInterface) {
 }
 
 export async function VIEW_PULL_REQUEST() {
-  const pull_request = await PULL_REQUEST();
+  const pull_request = PULL_REQUEST();
   try {
     console.log(pull_request.template);
     SUCCESS();
@@ -1225,7 +1066,7 @@ export async function VIEW_GITHUB_ACTIONS() {
 export async function VIEW_HUSKY_HOOKS() {
   const signature = "# aureus-setup-anchor";
   const commitMsgHook = `#!/bin/sh\n\n${signature}\nnpx aureus verify -- $1\n`;
-  const prePushHook = `#!/bin/sh\n\n${signature}\nif [ "$AUREUS_INTERNAL_PUSH" = "true" ]; then\n  exit 0\nfi\nnpx aureus bump --remote $1\n`;
+  const prePushHook = `#!/bin/sh\n\n${signature}\nif [ "$AUREUS_INTERNAL_PUSH" = "true" ]; then\n  exit 0\nfi\nnpx aureus bump && exit 0\n`;
 
   try {
     console.log("commit-msg hook:");
@@ -1253,9 +1094,7 @@ export function VERIFY(file: any) {
 
   if (!regex.test(msg)) {
     ERROR(`Invalid commit message format: "${msg}"`);
-    WARN(
-      `Format must follow Conventional Commits: one of [${types.join(", ")}]`,
-    );
+    WARN(`Format must follow Conventional Commits: one of [${types.join(", ")}]`);
     process.exit(1);
   }
   SUCCESS("Commit message verified");
@@ -1283,13 +1122,7 @@ export async function BUMP(options: any) {
     const newVersion = bumpVersion(bumpType);
 
     const changelog = await CHANGELOG();
-    const changelogContent = generateChangelog(
-      newVersion!,
-      commits,
-      username!,
-      repoName!,
-      changelog.template,
-    );
+    const changelogContent = generateChangelog(newVersion!, commits, username!, repoName!, changelog.template);
 
     if (options.dryRun) {
       console.log(`Next version would be: ${bumpType}`);
@@ -1305,33 +1138,20 @@ export async function BUMP(options: any) {
     child_process.execSync(`git add package.json CHANGELOG.md`, {
       stdio: "inherit",
     });
-    child_process.execSync(
-      `git commit -m "chore: bump to v${newVersion} from aureus"`,
-      {
-        stdio: "inherit",
-      },
-    );
-    child_process.execSync(
-      `git tag -a v${newVersion} -m "release ${newVersion}"`,
-      {
-        stdio: "inherit",
-      },
-    );
+    child_process.execSync(`git commit -m "chore: bump to v${newVersion} from aureus"`, {
+      stdio: "inherit",
+    });
+    child_process.execSync(`git tag -a v${newVersion} -m "release ${newVersion}"`, {
+      stdio: "inherit",
+    });
 
     SUCCESS(`Successfully bumped to version ${newVersion}`);
 
     // push changes and tags
     const remote = options.remote || "origin";
-    const branch = child_process
-      .execSync("git rev-parse --abbrev-ref HEAD")
-      .toString()
-      .trim();
+    const branch = child_process.execSync("git rev-parse --abbrev-ref HEAD").toString().trim();
     if (branch === "HEAD") {
-      ERROR(
-        "You are in a detached HEAD state. Please checkout a branch before pushing.\nBump commit and tag were created locally.\nRun manually: git push --follow-tags " +
-          remote +
-          " HEAD",
-      );
+      ERROR("You are in a detached HEAD state. Please checkout a branch before pushing.\nBump commit and tag were created locally.\nRun manually: git push --follow-tags " + remote + " HEAD");
       process.exit(1);
     }
     try {
@@ -1339,11 +1159,10 @@ export async function BUMP(options: any) {
         stdio: "inherit",
         env: { ...process.env, AUREUS_INTERNAL_PUSH: "true" },
       });
+      process.exit(0);
     } catch (e: any) {
       const detail = e.stderr?.toString().trim();
-      ERROR(
-        `Bump commit and tag created locally but push failed.${detail ? `\n${detail}` : ""}\nRun manually: git push --follow-tags ${remote} HEAD`,
-      );
+      ERROR(`Bump commit and tag created locally but push failed.${detail ? `\n${detail}` : ""}\nRun manually: git push --follow-tags ${remote} HEAD`);
       process.exit(1);
     }
   }

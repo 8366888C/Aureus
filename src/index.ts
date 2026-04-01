@@ -260,7 +260,6 @@ verify.action((file) => {
 // ! BUMP
 bump
   .option("--dry-run", "See changes without applying them")
-  .option("--remote <remote>", "Remote to push bump commit and tag to")
   .action(async (options) => {
     await BUMP(options);
   });
