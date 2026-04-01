@@ -111,6 +111,8 @@ When you run `aureus create husky-hooks` or select husky support during `aureus 
 - **commit-msg** - runs `aureus verify` to enforce conventional commits
 - **pre-push** - runs `aureus bump` to bump versions and update changelog before pushing
 
+---
+
 ## Configuration
 
 Aureus keeps user preferences in `~/.aureus/config.json` and reuses them across runs
@@ -125,6 +127,8 @@ Aureus keeps user preferences in `~/.aureus/config.json` and reuses them across 
 | `github_remote_protocol` | Git remote protocol               | ssh     |
 | `github_username`        | Your GitHub username              |         |
 | `contact`                | Contact email for code of conduct |         |
+
+---
 
 ## License
 
