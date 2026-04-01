@@ -1,6 +1,6 @@
 {
   "name": "aureus",
-  "version": "1.5.2",
+  "version": "1.6.0",
   "description": "CLI tool to bootstrap, standardize and automate repository workflows",
   "keywords": [
     "cli",

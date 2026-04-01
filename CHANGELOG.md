@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/8366888C/aureus/compare/v1.5.2...v1.6.0) (2026-04-01)
+
+
+### Features
+
+* final release ([916de9b](https://github.com/8366888C/aureus/commit/916de9b4dd636a9c9a7e0320b83f9968d7d065e8))
+
 ## [1.5.2](https://github.com/8366888C/aureus/compare/v1.5.1...v1.5.2) (2026-03-23)
 
 
