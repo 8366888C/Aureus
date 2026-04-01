@@ -4,6 +4,8 @@ CLI tool to bootstrap, standardize and automate repository workflows. It sets up
 
 [![aureus](https://nodei.co/npm/aureus.svg)](https://npmjs.com/package/aureus)
 
+---
+
 ## Features
 
 - Standardize commit messages with conventional commits
